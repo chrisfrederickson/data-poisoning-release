@@ -1,28 +1,63 @@
-
-
-
-  
+"""Determine Upper Bounds"""
 
 import numpy as np
-
 from scipy.linalg import orth
 import scipy.sparse as sparse
 from sklearn import svm
-
-import data_utils as data
-import datasets
-
 import cvxpy as cvx
 
 
 def hinge_loss(w, b, X, Y, sample_weights=None):
+    """ Calculate Hinge Loss
+
+    Calculates the
+
+    Parameters
+    ----------
+    w : np.ndarray of shape (dimensions,)
+        Coefficients
+    b : float
+        Intercept
+    X : np.ndarray of shape (instances, dimensions)
+        Input Features
+    Y : np.ndarray of shape (instances,)
+        Input Labels
+    sample_weights : None or np.ndarray of shape (???)
+        ???
+
+    Returns
+    -------
+    loss : float
+        Hinge loss
+    """
     if sample_weights is not None:
         sample_weights = sample_weights / np.sum(sample_weights)
         return np.sum(sample_weights * (np.maximum(1 - Y * (X.dot(w) + b), 0)))
     else:
         return np.mean(np.maximum(1 - Y * (X.dot(w) + b), 0))
 
+
 def hinge_grad(w, b, X, Y):
+    """ Gradient of Hinge Loss
+
+    Parameters
+    ----------
+    w : np.ndarray of shape (dimensions,)
+        Coefficients
+    b : float
+        Intercept
+    X : np.ndarray of shape (instances, dimensions)
+        Input Features
+    Y : np.ndarray of shape (instances,)
+        Input Labels
+
+    Returns
+    -------
+    grad_w : np.ndarray of shape (dimensions,)
+        Gradient of coefficients
+    grad_b : float
+        Gradient of intercept
+    """
     margins = Y * (X.dot(w) + b)
     sv_indicators = margins < 1
     if sparse.issparse(X):
@@ -41,18 +76,35 @@ def hinge_grad(w, b, X, Y):
 
 
 def sample_lower_bound_attack(X_train, Y_train, x_bs, y_bs, epsilon, num_iter_to_throw_out):
-    """
-    Input:
-        - Clean training data X_train, Y_train
-        - Pool of bad training data x_bs, y_bs
-        - epsilon: desired fraction of bad data to add (so total data is 1 + epsilon)
-        - num_iter_to_throw_out
-
-    Output:
-        - X_modified, Y_modified: X_train and Y_train plus samples from x_bs and y_bs
-        - idx_train, idx_poison: indices showing which samples are clean vs. poisoned
+    """ Create Poisoned Dataset from Pool of Malicious Data
 
     Note that the clean and poisoned data order is not randomized.
+
+    Parameters
+    ----------
+    X_train
+        Clean input features
+    Y_train
+        Clean input labels
+    x_bs :
+        Pool of malicious input features
+    y_bs :
+        Pool of malicious input labels
+    epsilon :
+        Desired fraction of malicious data to add
+    num_iter_to_throw_out :
+        ???
+
+    Returns
+    -------
+    X_modified
+        Poisoned features
+    Y_modified
+        Poisoned labels
+    idx_train
+        Indices of clean and poisoned data
+    idx_poison
+        Indices of clean and poisoned data
     """
     assert x_bs.shape[0] == y_bs.shape[0]
     num_iter = x_bs.shape[0] - num_iter_to_throw_out
@@ -77,11 +129,44 @@ def sample_lower_bound_attack(X_train, Y_train, x_bs, y_bs, epsilon, num_iter_to
 
 def svm_with_rho_squared(X_train, Y_train, X_test, Y_test, upper_params_norm_sq, use_bias, 
                          weight_decay=None):
-    """
-    Trains an SVM that has params with squared norm roughly equals (and no larger) than 
+    """ Train Support Vector Machine
+
+    Trains an SVM that has params with squared norm roughly equals (and no larger) than
     upper_params_norm_sq. It works by doing binary search on the weight_decay.
 
-     initial value of weight decay.
+    Parameters
+    ----------
+    X_train : np.ndarray of shape (instances, dimensions)
+        Input training features
+    Y_train : np.ndarray of shape (instances,)
+        Input training labels
+    X_test : np.ndarray of shape (instances, dimensions)
+        Input testing features
+    Y_test : np.ndarray of shape (instances)
+        Input testing labels
+    upper_params_norm_sq : ???
+    use_bias : ???
+    weight_decay : float
+
+    Returns
+    -------
+    train_loss : float
+        Training loss
+    train_acc : float
+        Training accuracy
+    test_loss : float
+        Testing loss
+    test_acc : float
+        Testing accuracu
+    params_norm_sq : ???
+    weight_decay : ???
+    params : np.ndarray of shape (dimensions,)
+        Fit coefficients
+    bias : float
+        Fit intercept
+    svm_model : ???
+        Trained Support Vector Machine model
+
     """
     rho_sq_tol = 0.01
     params_norm_sq = None
@@ -174,8 +259,26 @@ def evaluate_attack(X_modified, Y_modified, X_test, Y_test,
                     upper_params_norm_sq,
                     use_bias):
     """
+
     Trains an SVM on the clean+poisoned data (by calling svm_with_rho_squared)
     and then reports statistics on clean vs poisoned loss, etc.
+
+    Parameters
+    ----------
+    X_modified
+    Y_modified
+    X_test
+    Y_test
+    idx_train
+    idx_poison
+    epsilon
+    weight_decay
+    upper_params_norm_sq
+    use_bias
+
+    Returns
+    -------
+
     """
     X_train = X_modified[idx_train, :]
     Y_train = Y_modified[idx_train]
@@ -232,10 +335,9 @@ def evaluate_attack(X_modified, Y_modified, X_test, Y_test,
     print('\n')
 
     return total_train_loss, avg_good_train_loss, avg_bad_train_loss, test_loss, \
-    overall_train_acc, good_train_acc, bad_train_acc, test_acc, params_norm_sq, weight_decay
+           overall_train_acc, good_train_acc, bad_train_acc, test_acc, \
+           params_norm_sq, weight_decay
 
-
-### Main attack loop
 
 def generate_upper_and_lower_bounds(
     X_train, Y_train,
@@ -251,6 +353,32 @@ def generate_upper_and_lower_bounds(
     verbose=True,
     print_interval=500,
     ):
+    """
+
+    Parameters
+    ----------
+    X_train
+    Y_train
+    norm_sq_constraint
+    epsilon
+    max_iter
+    num_iter_to_throw_out
+    learning_rate
+    init_w
+    init_b
+    class_map
+    centroids
+    centroid_vec
+    sphere_radii
+    slab_radii
+    minimizer
+    verbose
+    print_interval
+
+    Returns
+    -------
+
+    """
     
     x_bs = np.zeros((max_iter, X_train.shape[1]))
     y_bs = np.zeros(max_iter)
@@ -357,17 +485,41 @@ def generate_upper_and_lower_bounds(
       best_upper_good_acc, best_upper_bad_acc, \
       best_upper_params_norm_sq
 
+###################
+# Minimizer / CVX #
+###################
 
-### Minimizer / CVX
 
-def cvx_dot(a,b):
+def cvx_dot(a, b):
+    """ CVX Dot Product
+
+    Parameters
+    ----------
+    a : ???
+    b : ???
+
+    Returns
+    -------
+    dot : ???
+        Dot product of a and b
+    """
     return cvx.sum_entries(cvx.mul_elemwise(a, b))
 
+
 def get_projection_matrix(w, centroid, centroid_vec):
-    """
-    Output: projection matrix P that projects a vector onto the subspace spanned by
+    """ Get Projection Matrix
+
+    Parameters
+    ----------
+    w : ???
+    centroid : ???
+    centroid_vec : ???
+
+    Returns
+    -------
+    P : np.ndarray of shape (3, dimensions)
+        Projection matrix that projects a vector onto the subspace spanned by
             w, centroid, and centroid_vec
-    P is 3 x num_features
     """
     subspace = np.concatenate((
         w.reshape(1, -1),
@@ -381,12 +533,19 @@ def get_projection_matrix(w, centroid, centroid_vec):
 
     return P
 
-class Minimizer(object):
 
-    def __init__(
-        self,
-        use_sphere=True,
-        use_slab=True):
+class Minimizer(object):
+    """ Minimizer ???
+    """
+
+    def __init__(self, use_sphere=True, use_slab=True):
+        """ Minimizer ???
+
+        Parameters
+        ----------
+        use_sphere
+        use_slab
+        """
 
         d = 3
 
@@ -412,9 +571,24 @@ class Minimizer(object):
 
     def minimize_over_feasible_set(self, y, w, centroid, centroid_vec, sphere_radius, slab_radius,
                                    verbose=False):
-        """
+        """ Minimize over Feasible Set
+
         Includes both sphere and slab.
-        Returns optimal x.
+
+        Parameters
+        ----------
+        y
+        w
+        centroid
+        centroid_vec
+        sphere_radius
+        slab_radius
+        verbose
+
+        Returns
+        -------
+        x :
+            Optimal x
         """
         P = get_projection_matrix(w, centroid, centroid_vec)    
         
@@ -432,13 +606,21 @@ class Minimizer(object):
         return x_opt.dot(P)
 
 
-###
 class NearestPointFinder(object):
-    """
+    """ Nearest Point Finder
+
     We can speed this up by expressing the constraints in one dimension,
     but let's see how it goes first.
     """
+
     def __init__(self, d):
+        """ Nearest Point Finder
+
+        Parameters
+        ----------
+        d : ???
+            ???
+        """
 
         self.cvx_c = cvx.Variable(1)
         self.cvx_y = cvx.Parameter(1)
@@ -475,6 +657,24 @@ class NearestPointFinder(object):
     def find_nearest_point(self, y, g, theta, 
                            centroid, centroid_vec, sphere_radius, slab_radius,
                            verbose=False):
+        """ Find Nearest Point
+
+        Parameters
+        ----------
+        y
+        g
+        theta
+        centroid
+        centroid_vec
+        sphere_radius
+        slab_radius
+        verbose
+
+        Returns
+        -------
+        c_opt :
+            ???
+        """
         self.cvx_y.value = y
         self.cvx_g.value = g.reshape(-1)
         self.cvx_theta.value = theta.reshape(-1)
@@ -488,13 +688,19 @@ class NearestPointFinder(object):
         c_opt = self.cvx_c.value
         return c_opt
 
-###
-class Projector(object):
 
-    def __init__(
-        self,
-        use_sphere=True,
-        use_slab=True):
+class Projector(object):
+    """ Projector ???
+    """
+
+    def __init__(self, use_sphere=True, use_slab=True):
+        """ Projector ???
+
+        Parameters
+        ----------
+        use_sphere
+        use_slab
+        """
 
         d = 3
 
@@ -519,6 +725,22 @@ class Projector(object):
 
     def project_onto_feasible_set(self, z, centroid, centroid_vec, sphere_radius, slab_radius,
                                    verbose=False):
+        """ Project onto Feasible Set
+
+        Parameters
+        ----------
+        z
+        centroid
+        centroid_vec
+        sphere_radius
+        slab_radius
+        verbose
+
+        Returns
+        -------
+        x_proj :
+            Data projected onto feasible set
+        """
 
         P = get_projection_matrix(z, centroid, centroid_vec)    
         

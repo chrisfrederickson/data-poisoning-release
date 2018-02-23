@@ -4,24 +4,16 @@
   
 
 import os
-import sys
 import argparse
 import json
 import shutil
 from collections import defaultdict
 
 import numpy as np
-import pandas as pd
-from sklearn import linear_model, preprocessing, cluster, metrics, svm, model_selection
+from sklearn import svm, model_selection
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import scipy.linalg as slin
-import scipy.sparse.linalg as sparselin
-import scipy.sparse as sparse
 import scipy.io as sio
 
-import IPython
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbconvert import HTMLExporter
@@ -29,11 +21,8 @@ from nbconvert import HTMLExporter
 import data_utils as data
 import datasets
 import defenses
-import defense_testers
-from upper_bounds import hinge_loss, hinge_grad
-
-
-
+from legacy import defense_testers
+from upper_bounds import hinge_loss
 
 parser = argparse.ArgumentParser()
 parser.add_argument('dataset_name', help='One of: imdb, enron, dogfish')

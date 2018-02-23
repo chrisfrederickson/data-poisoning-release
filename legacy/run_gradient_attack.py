@@ -4,18 +4,10 @@
   
 
 import os
-import sys
 import argparse
 
 import numpy as np
-import pandas as pd
-from sklearn import linear_model, preprocessing, cluster
-import matplotlib.pyplot as plt
-import seaborn as sns
-import scipy.linalg as slin
-import scipy.sparse.linalg as sparselin
 import scipy.sparse as sparse
-from scipy.stats import pearsonr
 
 import datasets
 import data_utils as data
@@ -25,8 +17,7 @@ from influence.influence.smooth_hinge import SmoothHinge
 
 from influence.influence.dataset import DataSet
 from tensorflow.contrib.learn.python.learn.datasets import base
-import iterative_attack
-
+from legacy import iterative_attack
 
 parser = argparse.ArgumentParser()
 parser.add_argument('dataset_name', help='One of: imdb, enron, dogfish, mnist_17')

@@ -1,6 +1,6 @@
 # Certified Defenses for Data Poisoning Attacks
 
-This code replicates the experiments from the following paper:
+This fork is for me to make misc changes tailored to my own workflow. See the original paper for full details.
 
 > Jacob Steinhardt, Pang Wei Koh, and Percy Liang
 >
@@ -8,37 +8,83 @@ This code replicates the experiments from the following paper:
 >
 > _NIPS_ 2017.
 
-We have a reproducible, executable, and Dockerized version of these scripts on [Codalab](http://bit.ly/cl-datapois).
+## What does everything do?
+To keep track of and make sense of what things do. I have also moved anything that did not seem strictly necessary to the legacy folder.
 
-The datasets for the experiments can also be found at the Codalab link.
+### Data / Dataset
+- **data_utils.py**: Misc data utilities. E.g. Determine centroids. Get sphere and slab thresholds from percentile. Project data onto feasible set. Filter data outside of feasible set.
+- **datasets.py**: Dataset loading and saving utilities. E.g. Loading datasets. Creating paths to save data from intermediate steps. Setting *some* free parameters.
 
-Dependencies:
-- Numpy/Scipy/Scikit-learn/Pandas
-- Tensorflow (tested on v1.1.0)
-- Keras (tested on v2.0.4)
-- Spacy (tested on v1.8.2)
-- h5py (tested on v2.7.0)
-- cvxpy (tested on 0.4.9)
-- MATLAB/Gurobi
-- Matplotlib/Seaborn (for visualizations)
+### Defenses
+- **defenses.py**: Sphere and slab defenses?
 
-A Dockerfile with these dependencies (except MATLAB) can be found here: https://hub.docker.com/r/pangwei/tf1.1_cvxpy/
+### Benchmarks
+- **generate_label_flip_baseline.py**: Generates poisoned dataset using the label flip attack.
 
----
+### Visualisation
+- **plotter.py**: Utility to setup the plot as in Figure 1.
 
-Machine learning systems trained on user-provided data are susceptible to data poisoning attacks, 
-whereby malicious users inject false training data with the aim of corrupting the learned model. 
-While recent work has proposed a number of attacks and defenses, 
-little is understood about the worst-case loss of a defense in the face of a determined attacker. 
-We address this by constructing approximate upper bounds on the loss across a broad family of attacks, 
-for defenders that first perform outlier removal followed by empirical risk minimization. 
-Our approximation relies on two assumptions: 
-(1) that the dataset is large enough for statistical concentration between train and test error to hold, and 
-(2) that outliers within the clean (non- poisoned) data do not have a strong effect on the model. 
-Our bound comes paired with a candidate attack that often nearly matches the upper bound, 
-giving us a powerful tool for quickly assessing defenses on a given dataset. 
-Empirically, we find that even under a simple defense, 
-the MNIST-1-7 and Dogfish datasets are resilient to attack, 
-while in contrast the IMDB sentiment dataset can be driven from 12% to 23% test error by adding only 3% poisoned data.
+### Bounds
+- **generate_or_process_bounds.py**: Depending on the particular setting, this *either* calls the functions to generate the upper and lower bounds (lower bound being any realised attack). Or simply attempts to load the results, assuming that they already have been run.
+    - **Oracle**:
+    - **Data Dependent**:
+    - **Label Flip**
+    - **Integer Constrained**:
+- **upper_bounds.py**:
 
-If you have questions, please contact Jacob Steinhardt (<jsteinhardt@cs.stanford.edu>) or Pang Wei Koh (<pangwei@cs.stanford.edu>).
+## Common Data Formats
+
+### Bound
+The **bound** format is used to store the results of the upper and lower bound calculation. Created in **generate_or_process_bounds.py**.
+
+Variable | Type | Description
+--- | --- | ---
+percentile | np.ndarray of shape () | Percentile of data to keep when setting the outlier removal threshold free parameter.
+weight_decay | np.ndarray of shape () | The SVM is trained such that the [upper_bound_norm_square] is equal to some value. The weight decay is used to calculate C by  1/(weight_decay * num_instances) and therefore C can be recovered from this data.
+epsilons | np.ndarray of shape (epsilons,) | Fraction of poisoning data added.
+upper_total_losses | np.ndarray of shape (epsilons,) | Upper bound loss on the poisoned dataset due to both clean and malicious data.
+upper_good_losses | np.ndarray of shape (epsilons,) | Upper bound loss on only clean data.
+upper_bad_losses | np.ndarray of shape (epsilons,) | Upper bound loss on only malicious data.
+upper_good_acc | np.ndarray of shape (epsilons,) | Upper bound accuracy on only clean data.
+upper_bad_acc | np.ndarray of shape (epsilons,) | Upper bound accuracy on only malicious data (100% if [worst_margin] > 0, 0% otherwise)
+upper_params_norm_sq | np.ndarray of shape (epsilons,) | Used to determine SVM C. ???
+lower_total_train_losses | np.ndarray of shape (epsilons,) | Lower bound training loss on the poisoned dataset due to both clean and malicious data.
+lower_avg_good_train_losses | np.ndarray of shape (epsilons,) | Lower bound training loss on only clean data.
+lower_avg_bad_train_losses | np.ndarray of shape (epsilons,) | Lower bound training loss on only malicious data.
+lower_test_losses | np.ndarray of shape (epsilons,) | Lower bound testing loss.
+lower_overall_train_acc | np.ndarray of shape (epsilons,) | Lower bound training accuracy on poisoned dataset due to both clean and malicious data.
+lower_good_train_acc | np.ndarray of shape (epsilons,) | Lower bound training accuracy on only clean data.
+lower_bad_train_acc | np.ndarray of shape (epsilons,) | Lower bound training accuracy on only malicious data.
+lower_test_acc | np.ndarray of shape (epsilons,) | Lower bound testing accuracy.
+lower_params_norm_sq | np.ndarray of shape (epsilons,) | Same as *upper_params_norm_sq*, but for lower bound.
+lower_weight_decays | np.ndarray of shape (epsilons,) | Same as *weight_decay*, but for lower bound.
+
+### Attack
+Created in **generate_or_process_bounds.py**.
+
+Variable | Type | Description
+--- | --- | ---
+X_modified | np.ndarray of shape (instances, dimensions) | Poisoned training features.
+Y_modified | np.ndarray of shape (instances,) | Poisoned training lables.
+X_test | np.ndarray of shape (instances, dimensions) | Testing features.
+Y_test | np.ndarray of shape (instances,) | Testing labels.
+idx_train | | ???
+idx_poison | | Indices of malicious data in the poisoned dataset.
+
+### Poisoned Dataset
+Created in **generate_label_flip_baseline.py**.
+
+Variable | Type | Description
+--- | --- | ---
+poisoned_X_train | np.ndarray of shape (instances, dimensions) | Poisoned training features.
+Y_train | np.ndarray of shape (instances,)| Poisoned training labels.
+
+### Dataset
+Created in **generate_label_flip_baseline.py**.
+
+Variable | Type | Description
+--- | --- | ---
+X_train | np.ndarray of shape (instances, dimensions) | Training features.
+Y_train | np.ndarray of shape (instances,) | Training labels.
+X_test | np.ndarray of shape (instances, dimensions) | Testing features.
+Y_test | np.ndarray of shape (instances,) | Testing labels.

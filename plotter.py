@@ -1,11 +1,8 @@
-import numpy as np
-import pandas as pd
+"""Create Basic Plot"""
 
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import scipy.linalg as slin
-import scipy.sparse.linalg as sparselin
-import scipy.sparse as sparse
 
 
 class Plotter(object):

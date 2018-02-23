@@ -1,19 +1,16 @@
-
-
-
-  
+"""Data Utilities"""
 
 import json
 import numpy as np
 import scipy.sparse as sparse
-
 import defenses
 import upper_bounds
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):        
         if isinstance(obj, np.ndarray):
-            assert len(np.shape(obj)) == 1 # Can only handle 1D ndarrays
+            assert len(np.shape(obj)) == 1  # Can only handle 1D ndarrays
             return obj.tolist()
         if isinstance(obj, np.floating):
             return float(obj)
@@ -239,4 +236,3 @@ def filter_points_outside_feasible_set(X, Y,
 
     print(np.sum(idx_to_keep))
     return X[idx_to_keep, :], Y[idx_to_keep]
-    

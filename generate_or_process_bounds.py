@@ -1,35 +1,16 @@
+"""Generate or Process Bounds"""
 
-
-
-  
-
-import os
-import sys
 import argparse
-import json
-import shutil
-from collections import defaultdict
-
 import numpy as np
-import pandas as pd
-from sklearn import linear_model, preprocessing, cluster, metrics, svm, model_selection
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import scipy.linalg as slin
-import scipy.sparse.linalg as sparselin
 import scipy.sparse as sparse
 import scipy.io as sio
-
-import IPython
-
 import data_utils as data
 import datasets
 import upper_bounds
-from upper_bounds import hinge_loss, hinge_grad
 
-
-### Parameters
+##############
+# Parameters #
+##############
 verbose = True
 use_bias = True
 
@@ -38,9 +19,11 @@ num_iter_to_throw_out = 0
 learning_rate = 0.1
 
 print_interval = 1000
-percentile = 70 # Default percentile
+percentile = 70  # Default percentile
 
-### Read in arguments and setup data
+###########################
+# Process Input Arguments #
+###########################
 
 # By default, we generate upper and lower bounds for the given dataset,
 # assuming a fixed oracle sphere+slab defense without any integrity constraints.
@@ -71,13 +54,19 @@ if process_slab + process_grad + process_labelflip + process_int == 0:
     no_process = True
 else:
     no_process = False
-X_train, Y_train, X_test, Y_test = datasets.load_dataset(dataset_name)
 
+#####################################################
+# Load Dataset and Get Dataset Dependent Parameters #
+#####################################################
+X_train, Y_train, X_test, Y_test = datasets.load_dataset(dataset_name)
 epsilons = datasets.DATASET_EPSILONS[dataset_name]
 norm_sq_constraint = datasets.DATASET_NORM_SQ_CONSTRAINTS[dataset_name]
 learning_rate = datasets.DATASET_LEARNING_RATES[dataset_name]
 num_iter_after_burnin = datasets.DATASET_NUM_ITERS_AFTER_BURNIN[dataset_name]
 
+########################################
+# Initialize Output Variables as Zeros #
+########################################
 upper_total_losses = np.zeros_like(epsilons)
 upper_good_losses = np.zeros_like(epsilons)
 upper_bad_losses = np.zeros_like(epsilons)
@@ -96,14 +85,16 @@ lower_test_acc = np.zeros_like(epsilons)
 lower_params_norm_sq = np.zeros_like(epsilons)
 lower_weight_decays = np.zeros_like(epsilons)
 
-### Initial training on clean data
+##################################
+# Initial Training on Clean Data #
+##################################
 print('=== Training on clean data ===')
 
 # Special case for the imdb dataset: 
 # We set the initial guess for the correct weight_decay 
 # to avoid unnecessary computation, since it takes a bit of time
 # to binary search to find this
-if (no_process) and (dataset_name == 'imdb'):
+if no_process and (dataset_name == 'imdb'):
     clean_weight_decay = 0.0102181799337
 elif not no_process:
     standard_f = np.load(datasets.get_bounds_path(dataset_name, norm_sq_constraint))
@@ -112,6 +103,7 @@ elif not no_process:
 else:
     clean_weight_decay = None
 
+# Fit SVM
 train_loss, train_acc, test_loss, test_acc, \
   params_norm_sq, weight_decay, orig_params, orig_bias, _ = \
   upper_bounds.svm_with_rho_squared(
@@ -121,6 +113,7 @@ train_loss, train_acc, test_loss, test_acc, \
     use_bias=use_bias, 
     weight_decay=clean_weight_decay)
 
+# Save Results on Clean Data (epsilon == 0)
 if epsilons[0] == 0:
 
     upper_total_losses[0] = train_loss
@@ -141,7 +134,7 @@ if epsilons[0] == 0:
     lower_params_norm_sq[0] = params_norm_sq
     lower_weight_decays[0] = weight_decay
 
-lower_weight_decay = weight_decay
+lower_weight_decay = weight_decay  # ??? Is this even used? ???
 
 if no_process:
     minimizer = upper_bounds.Minimizer()
@@ -163,11 +156,12 @@ if no_process:
     needed_iter = int(np.round(np.max(epsilons) * X_train.shape[0]) + num_iter_to_throw_out)
     assert max_iter >= needed_iter, 'Not enough samples; increase max_iter to at least %s.' % needed_iter
 
-
-### Start main loop over each epsilon (fraction of data to attack)
+####################################################
+# Generate Upper and Lower Bounds for Each Epsilon #
+####################################################
 for epsilon_idx, epsilon in enumerate(epsilons):
 
-    if epsilon == 0: # We have already handled this case above
+    if epsilon == 0:  # We have already handled this case above
         continue
 
     print('=== epsilon = %s ===' % epsilon)

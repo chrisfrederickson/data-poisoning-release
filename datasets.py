@@ -1,7 +1,4 @@
-
-
-
-  
+"""Dataset Utilities"""
 
 import os 
 import numpy as np
@@ -9,7 +6,6 @@ import scipy.sparse as sparse
 import scipy.io as sio
 import IPython
 
-# Codalab
 DATA_FOLDER = './data'
 OUTPUT_FOLDER = '.'
 

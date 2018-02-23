@@ -1,28 +1,35 @@
-
-
-
-  
-
-import sys
+"""Defenses"""
 
 import numpy as np
-import pandas as pd
-from sklearn import linear_model, preprocessing, cluster, metrics, svm, model_selection, neighbors
-
+from sklearn import metrics, model_selection, neighbors
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.linalg as slin
 import scipy.sparse.linalg as sparselin
 import scipy.sparse as sparse
-
 import data_utils as data
 
 
 def remove_quantile(X, Y, dists, frac_to_remove):
-    """
+    """ Remove Quantile
+
     Removes the frac_to_remove points from X and Y with the highest value in dists.
     This works separately for each class.
-    """    
+
+    Parameters
+    ----------
+    X
+    Y
+    dists
+    frac_to_remove
+
+    Returns
+    -------
+    X_def
+    Y_def
+    idx_to_keep
+
+    """
     if len(dists.shape) == 2: # Accept column vectors but reshape
         assert dists.shape[1] == 1
         dists = np.reshape(dists, -1)               
@@ -50,18 +57,30 @@ def remove_quantile(X, Y, dists, frac_to_remove):
     return X_def, Y_def, idx_to_keep
 
 
-def compute_dists_under_Q(    
-    X, Y,
-    Q,
-    subtract_from_l2=False, #If this is true, computes ||x - mu|| - ||Q(x - mu)||
-    centroids=None,
-    class_map=None,    
-    norm=2):
-    """
-    Computes ||Q(x - mu)|| in the corresponding norm. 
+def compute_dists_under_Q(X, Y, Q, subtract_from_l2=False,
+                          centroids=None, class_map=None, norm=2):
+    """ Compute Distances Under Q
+
+    Computes ||Q(x - mu)|| in the corresponding norm.
     Returns a vector of length num_examples (X.shape[0]).
     If centroids is not specified, calculate it from the data.
     If Q has dimension 3, then each class gets its own Q.
+
+    Parameters
+    ----------
+    X
+    Y
+    Q
+    subtract_from_l2
+        If this is true, computes ||x - mu|| - ||Q(x - mu)||
+    centroids
+    class_map
+    norm
+
+    Returns
+    -------
+    Q_dists
+
     """
     if (centroids is not None) or (class_map is not None): 
         assert (centroids is not None) and (class_map is not None)
@@ -121,9 +140,22 @@ def compute_dists_under_Q(
     return Q_dists
 
 
-
 class DataDef(object):
+    """Data Def ???"""
+
     def __init__(self, X_modified, Y_modified, X_test, Y_test, idx_train, idx_poison):
+        """ Data Def ???
+
+        Parameters
+        ----------
+        X_modified
+        Y_modified
+        X_test
+        Y_test
+        idx_train
+        idx_poison
+        """
+
         self.X_modified = X_modified
         self.Y_modified = Y_modified
         self.X_test = X_test
@@ -148,7 +180,14 @@ class DataDef(object):
     def plot_dists(
         self,
         dists, 
-        num_bins=100):    
+        num_bins=100):
+        """ Plot Distances
+
+        Parameters
+        ----------
+        dists
+        num_bins
+        """
 
         dists_train = dists[self.idx_train]
         dists_poison = dists[self.idx_poison]
@@ -173,13 +212,25 @@ class DataDef(object):
                     sns.distplot(dists_poison[self.Y_poison == y], kde=False, bins=bins)
                 plt.show()
 
-
     def compute_dists_under_Q_over_dataset(
         self,
         Q,
         subtract_from_l2=False, #If this is true, plots ||x - mu|| - ||Q(x - mu)||
         use_emp_centroids=False,        
         norm=2):
+        """ Compute Distances under Q Over Dataset
+
+        Parameters
+        ----------
+        Q
+        subtract_from_l2
+        use_emp_centroids
+        norm
+
+        Returns
+        -------
+        dists
+        """
 
         if use_emp_centroids:
             centroids = self.emp_centroids
@@ -196,17 +247,34 @@ class DataDef(object):
 
         return dists
 
-
     def get_sqrt_inv_covs(self, use_emp=False):
+        """ Square Inverse Covariance ???
+
+        Parameters
+        ----------
+        use_emp
+
+        Returns
+        -------
+        sqrt_inv_covs
+        """
         if use_emp:            
             sqrt_inv_covs = data.get_sqrt_inv_cov(self.X_modified, self.Y_modified, self.class_map)
         else:            
             sqrt_inv_covs = data.get_sqrt_inv_cov(self.X_train, self.Y_train, self.class_map)
         return sqrt_inv_covs
 
-
     def get_knn_dists(self, num_neighbors):
+        """ KNN Distances
 
+        Parameters
+        ----------
+        num_neighbors
+
+        Returns
+        -------
+        dists
+        """
         nbrs = neighbors.NearestNeighbors(
             n_neighbors=num_neighbors, 
             metric='euclidean').fit(
@@ -214,20 +282,32 @@ class DataDef(object):
         dists_to_each_neighbor, _ = nbrs.kneighbors(self.X_modified)
         return np.sum(dists_to_each_neighbor, axis=1)
 
+    def project_to_low_rank(self, k, use_emp=False, get_projected_data=False):
+        """Project to Low Rank
 
-    # Might be able to speed up; is svds actually performant on dense matrices?
-    def project_to_low_rank(
-        self,
-        k,
-        use_emp=False,
-        get_projected_data=False):
-        """
         Projects to the rank (k+2) subspace defined by the top k SVs, mu_pos, and mu_neg.
 
         If k is None, it tries to find a good k by taking the top 1000 SVs and seeing if we can
-        find some k such that sigma_k / sigma_1 < 0.1. If we can, we take the smallest such k. 
-        If not, we take k = 1000. 
+        find some k such that sigma_k / sigma_1 < 0.1. If we can, we take the smallest such k.
+        If not, we take k = 1000.
+
+        TODO Might be able to speed up; is svds actually performant on dense matrices?
+
+        Parameters
+        ----------
+        k
+        use_emp
+        get_projected_data
+
+        Returns
+        -------
+        P
+        achieved_sv_ratio
+        PX_modified : ?? (optional)
+        PX_train : ?? (optional)
+        PX_poison : ?? (optional)
         """
+
         if use_emp:
             X = self.X_modified
             Y = self.Y_modified
@@ -274,8 +354,18 @@ class DataDef(object):
         else:
             return P, achieved_sv_ratio
 
-
     def find_num_points_kept(self, idx_to_keep):
+        """ Find Number of Points Kept
+
+        Parameters
+        ----------
+        idx_to_keep
+
+        Returns
+        -------
+        frac_of_good_points_kept
+        frac_of_bad_points_kept
+        """
         good_mask = np.zeros(self.X_modified.shape[0], dtype=bool)
         good_mask[self.idx_train] = True
         bad_mask = np.zeros(self.X_modified.shape[0], dtype=bool)
@@ -288,13 +378,24 @@ class DataDef(object):
         frac_of_bad_points_kept = np.mean(keep_mask & bad_mask) / np.mean(bad_mask)
         return frac_of_good_points_kept, frac_of_bad_points_kept
 
+    def remove_and_retrain(self, dists, model, frac_to_remove, num_folds=5):
+        """ Remove and Retrain
 
-    def remove_and_retrain(
-        self,
-        dists,
-        model,
-        frac_to_remove,
-        num_folds=5):
+        Parameters
+        ----------
+        dists
+        model
+        frac_to_remove
+        num_folds
+
+        Returns
+        -------
+        train_acc
+        mean_cv_score
+        test_acc
+        frac_of_good_points_kept
+        frac_of_bad_points_kept
+        """
 
         X_def, Y_def, idx_to_keep = remove_quantile(
             self.X_modified, 
