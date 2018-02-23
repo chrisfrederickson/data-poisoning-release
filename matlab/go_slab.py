@@ -28,10 +28,10 @@ for dataset_name in ['mnist_17', 'dogfish']:
                 eta,
                 rho_squared,
                 quantile)
-        print('running command: %s' % cmd)
+        print(('running command: %s' % cmd))
         proc = Popen(shlex.split(cmd), stdout=open(log_file,'w'), stderr=open(err_file,'w'))
         procs.append(proc)
 
 for proc in procs:
   proc.wait()
-  print('done with command %s' % proc.pid)
+  print(('done with command %s' % proc.pid))

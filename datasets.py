@@ -1,7 +1,7 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals  
+
+
+
+  
 
 import os 
 import numpy as np
@@ -9,13 +9,9 @@ import scipy.sparse as sparse
 import scipy.io as sio
 import IPython
 
-# Local running
-DATA_FOLDER = '/afs/cs.stanford.edu/u/jsteinhardt/data-poisoning-scratch/data'
-OUTPUT_FOLDER = '/afs/cs.stanford.edu/u/jsteinhardt/data-poisoning-scratch'
-
 # Codalab
-# DATA_FOLDER = './data'
-# OUTPUT_FOLDER = '.'
+DATA_FOLDER = './data'
+OUTPUT_FOLDER = '.'
 
 # WEB_FOLDER = '/afs/cs.stanford.edu/u/jsteinhardt/www/reports'
 
@@ -294,7 +290,7 @@ def load_attack(dataset_name, file_name):
     elif ext == '.npz':
         return load_attack_npz(dataset_name, file_name)    
     else:
-        raise ValueError, 'File extension must be .mat or .npz.'
+        raise ValueError('File extension must be .mat or .npz.')
 
 
 def load_attack_mat(dataset_name, file_name, take_path=False):

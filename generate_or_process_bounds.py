@@ -1,7 +1,7 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals  
+
+
+
+  
 
 import os
 import sys
@@ -309,7 +309,7 @@ for epsilon_idx, epsilon in enumerate(epsilons):
                 X_test, Y_test,
                 X_poison, Y_poison)
         else: 
-            raise ValueError, 'invalid dataset'
+            raise ValueError('invalid dataset')
 
     
     # Whether we generated or loaded the attack above,

@@ -58,7 +58,7 @@ def iterative_attack(
     largest_test_loss = 0
     stop_counter = 0
 
-    print('Test idx: %s' % test_idx)
+    print(('Test idx: %s' % test_idx))
 
     np.save(os.path.join(output_root, '%s_indices' % model.model_name), indices_to_poison)
     np.savez(os.path.join(output_root, '%s_x_iter-0' % (model.model_name)), 
@@ -66,7 +66,7 @@ def iterative_attack(
         Y_train=model.data_sets.train.labels)
 
     for attack_iter in range(num_iter):
-        print('*** Iter: %s' % attack_iter)
+        print(('*** Iter: %s' % attack_iter))
 
         # Create modified training dataset        
         old_X_train = np.copy(model.data_sets.train.x)
@@ -102,11 +102,11 @@ def iterative_attack(
         poisoned_dists_mean = poisoned_dists_sum / len(indices_to_poison)
 
         dists_moved = np.linalg.norm(old_X_train[indices_to_poison, :] - poisoned_X_train[indices_to_poison, :], axis=1)
-        print('Average distance to cluster center (overall): %s' % dists_mean)
-        print('Average distance to cluster center (poisoned): %s' % poisoned_dists_mean)
-        print('Average diff in X_train among poisoned indices = %s' % np.mean(dists_moved))
-        print('Fraction of 0 gradient points: %s' % np.mean(dists_moved == 0))
-        print('Average distance moved by points that moved: %s' % np.mean(dists_moved[dists_moved > 0]))
+        print(('Average distance to cluster center (overall): %s' % dists_mean))
+        print(('Average distance to cluster center (poisoned): %s' % poisoned_dists_mean))
+        print(('Average diff in X_train among poisoned indices = %s' % np.mean(dists_moved)))
+        print(('Fraction of 0 gradient points: %s' % np.mean(dists_moved == 0)))
+        print(('Average distance moved by points that moved: %s' % np.mean(dists_moved[dists_moved > 0])))
         
         # Update training dataset
         model.update_train_x(poisoned_X_train)

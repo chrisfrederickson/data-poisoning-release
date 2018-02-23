@@ -1,7 +1,7 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals  
+
+
+
+  
 
 import os
 import sys
@@ -57,14 +57,14 @@ debug = args.debug
 ### Sanitize input and setup file paths
 allowed_defenses = ['centroid-vec', 'l2-ball', 'l1-ball', 'inverse-sigma', 'pca-subspace', 'k-NN']
 if ((defense_to_test is not None) and (defense_to_test not in allowed_defenses)):
-    raise ValueError, 'defense must be in %s' % allowed_defenses 
+    raise ValueError('defense must be in %s' % allowed_defenses) 
 
 # if ext != '.mat':
     # file_name = file_name + '.mat'    
 
 attack_path = os.path.join(datasets.DATA_FOLDER, dataset_name, file_name)
 if not os.path.isfile(attack_path):
-    raise ValueError, 'Specified file %s does not exist' % attack_path
+    raise ValueError('Specified file %s does not exist' % attack_path)
 
 output_web_path = datasets.get_web_html_path(file_name)
 output_ipynb_path = datasets.get_output_ipynb_path(dataset_name, file_name)

@@ -1,7 +1,7 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals  
+
+
+
+  
 
 import sys
 
@@ -76,7 +76,7 @@ def compute_dists_under_Q(
     elif norm == 2:
         metric = 'euclidean'
     else:
-        raise ValueError, 'norm must be 1 or 2'
+        raise ValueError('norm must be 1 or 2')
 
     Q_dists = np.zeros(X.shape[0])
     if subtract_from_l2:
@@ -93,7 +93,7 @@ def compute_dists_under_Q(
             Q_dists[Y == y] = metrics.pairwise.pairwise_distances(
                 X[Y == y, :],
                 mu,
-                metric=metric)            
+                metric=metric).flatten()
         else:
             if len(Q.shape) == 3:
                 current_Q = Q[class_map[y], ...]
@@ -109,13 +109,13 @@ def compute_dists_under_Q(
             Q_dists[Y == y] = metrics.pairwise.pairwise_distances(
                 XQ,
                 muQ,
-                metric=metric)   
+                metric=metric).flatten()
 
             if subtract_from_l2:
                 L2_dists[Y == y] = metrics.pairwise.pairwise_distances(
                     X[Y == y, :],
                     mu,
-                    metric=metric) 
+                    metric=metric).flatten()
                 Q_dists[Y == y] = np.sqrt(np.square(L2_dists[Y == y]) - np.square(Q_dists[Y == y]))
 
     return Q_dists

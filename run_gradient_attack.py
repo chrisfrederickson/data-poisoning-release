@@ -1,7 +1,7 @@
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals  
+
+
+
+  
 
 import os
 import sys
@@ -96,7 +96,7 @@ elif shard == 4:
 elif shard == 5:
     target_epsilons = epsilons[8:9]
 else:
-    raise ValueError, 'shard must be 0-5'    
+    raise ValueError('shard must be 0-5')    
 
 for random_seed in [1]:
     for epsilon_idx, epsilon in enumerate(epsilons):

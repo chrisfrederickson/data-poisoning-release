@@ -116,7 +116,7 @@ class Plotter(object):
 
         y_left = (r + v.dot(mu) - self.x_min * v0) / v1
         y_right = (r + v.dot(mu) - self.x_max * v0) / v1
-        print(y_left, y_right)
+        print((y_left, y_right))
         self.draw_line(y0=y_left, y1=y_right, color=color)
     
 
