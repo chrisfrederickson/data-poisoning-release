@@ -10,7 +10,7 @@ import cvxpy as cvx
 def hinge_loss(w, b, X, Y, sample_weights=None):
     """ Calculate Hinge Loss
 
-    Calculates the
+    Calculates the hinge loss.
 
     Parameters
     ----------
@@ -82,28 +82,28 @@ def sample_lower_bound_attack(X_train, Y_train, x_bs, y_bs, epsilon, num_iter_to
 
     Parameters
     ----------
-    X_train
+    X_train : np.ndarray of shape (instances, dimensions)
         Clean input features
-    Y_train
+    Y_train : np.ndarray of shape (instances,)
         Clean input labels
-    x_bs :
+    x_bs : np.ndarray of shape (instances, dimensions)
         Pool of malicious input features
-    y_bs :
+    y_bs : np.ndarray of shape (instances,)
         Pool of malicious input labels
-    epsilon :
+    epsilon : float
         Desired fraction of malicious data to add
-    num_iter_to_throw_out :
+    num_iter_to_throw_out : int
         ???
 
     Returns
     -------
-    X_modified
+    X_modified : np.ndarray of shape (instances, dimensions)
         Poisoned features
-    Y_modified
+    Y_modified : no.ndarray of shape (instances,)
         Poisoned labels
-    idx_train
+    idx_train : np.ndarray of shape (instances,)
         Indices of clean and poisoned data
-    idx_poison
+    idx_poison : np.ndarray of shape (instances,)
         Indices of clean and poisoned data
     """
     assert x_bs.shape[0] == y_bs.shape[0]
@@ -258,27 +258,56 @@ def evaluate_attack(X_modified, Y_modified, X_test, Y_test,
                     epsilon, weight_decay,
                     upper_params_norm_sq,
                     use_bias):
-    """
+    """ Evaluate Attack
 
     Trains an SVM on the clean+poisoned data (by calling svm_with_rho_squared)
     and then reports statistics on clean vs poisoned loss, etc.
 
     Parameters
     ----------
-    X_modified
-    Y_modified
-    X_test
-    Y_test
-    idx_train
-    idx_poison
-    epsilon
-    weight_decay
-    upper_params_norm_sq
-    use_bias
+    X_modified : np.ndarray of shape (instances, dimensions)
+        Poisoned features
+    Y_modified : np.ndarray of shape (instances,)
+        Poisoned labels
+    X_test : np.ndarray of shape (instances, dimensions)
+        Testing features
+    Y_test : np.ndarray of shape (instances,)
+        Testing labels
+    idx_train : np.ndarray of shape (instances,)
+        ??
+    idx_poison : np.ndarray of shape (instances,)
+        Indices of malicious samples in the poisoned dataset
+    epsilon : float
+        Fraction of data to keep
+    weight_decay : float
+        Used to set SVM free parameters # TODO Clarify
+    upper_params_norm_sq : float
+        Used to set SVM free parameters TODO Clarify
+    use_bias : bool
+        Use bias in the SVM model
 
     Returns
     -------
-
+    total_train_loss : float
+        Training loss on the poisoned dataset due to both clean and malicious data.
+    avg_good_train_loss : float
+        Training loss on only clean data.
+    avg_bad_train_loss : float
+        Training loss on only malicious data.
+    test_loss : float
+        Testing loss.
+    overall_train_acc : float
+        Training data accuracy on poisoned dataset due to both clean and malicious data.
+    good_train_acc : float
+        Training data accuracy on only clean data.
+    bad_train_acc : float
+        Training data accuracy on only malicious data.
+    test_acc : float
+        Testing data accuracy
+    params_norm_sq : float
+        Usef to determine SVM C # TODO Clarify
+    weight_decay : float
+        Used to determine SVM C # TODO Clarify
     """
     X_train = X_modified[idx_train, :]
     Y_train = Y_modified[idx_train]
@@ -353,56 +382,90 @@ def generate_upper_and_lower_bounds(
     verbose=True,
     print_interval=500,
     ):
-    """
+    """ Generate Upper and Lower Bounds
 
     Parameters
     ----------
-    X_train
-    Y_train
-    norm_sq_constraint
-    epsilon
-    max_iter
-    num_iter_to_throw_out
-    learning_rate
-    init_w
-    init_b
-    class_map
-    centroids
-    centroid_vec
-    sphere_radii
-    slab_radii
-    minimizer
-    verbose
-    print_interval
+    X_train : :obj:'np.ndarray' of shape (instances, dimensions)
+    Y_train : np.ndarray of shape (instances,)
+    norm_sq_constraint : float
+    epsilon : float
+    max_iter : int
+    num_iter_to_throw_out : int
+    learning_rate : float
+    init_w : np.ndarray of shape (dimensions)
+    init_b : float
+    class_map : dict
+    centroids : np.ndarray of shape (classes, dimensions)
+    centroid_vec : np.ndarray of shape (1, dimensions)
+    sphere_radii : np.ndarray of shape (classes,)
+    slab_radii : np.ndarray of shape (classes,)
+    minimizer : Minimizer
+    verbose : bool
+    print_interval : int
 
     Returns
     -------
-
+    X_modified : np.ndarray of shape (instances, dimensions)
+    Y_modified : np.ndarray of shape (instances,)
+    idx_train : np.ndarray of shape (instances,)
+    idx_poison : np.ndarray of shape (instances,)
+    best_upper_bound : float
+    best_upper_good_loss : float
+    best_upper_bad_loss : float
+    best_upper_good_acc : float
+    best_upper_bad_acc : float
+    best_upper_params_norm_sq :float
     """
-    
+
+    # Initialize Variables as 0
     x_bs = np.zeros((max_iter, X_train.shape[1]))
     y_bs = np.zeros(max_iter)
     sum_w = np.zeros(X_train.shape[1])
 
+    ##########
+    # Line 1 #
+    ##########
+
+    # Initialize Sum of Gradients (z)
     sum_of_grads_w_sq = np.ones(X_train.shape[1])
     sum_of_grads_w = np.zeros(X_train.shape[1])
     sum_of_grads_b = 0
 
+    # Initialize Upper Bound (U*)
     best_upper_bound = 10000
 
+    # Initialize ??? (\lambda)
     current_lambda = 1 / learning_rate
-    
+
+    # Initialize Model (\theta)
     w = init_w
     b = init_b
 
+    ##########
+    # Line 2 #
+    ##########
+
     for iter_idx in range(max_iter):
 
-        grad_w, grad_b = hinge_grad(w, b, X_train, Y_train) 
+        #####################
+        # Line 5 (1st Half) #
+        #####################
+
+        # Calculate gradient of loss
+        grad_w, grad_b = hinge_grad(w, b, X_train, Y_train)
 
         if verbose: 
-            if iter_idx % print_interval == 0: print("At iter %s:" % iter_idx)    
-        
-        # Pick the y with the worse (more negative) margin        
+            if iter_idx % print_interval == 0:
+                print("At iter %s:" % iter_idx)
+
+        ##########
+        # Line 3 #
+        ##########
+
+        # Find the attack point that maximizes loss function.
+        # We do not know which class gives the maximum loss.
+        # Pick the class with the worse (more negative) margin.
         worst_margin = None
         for y_b in set(Y_train):
 
@@ -416,26 +479,42 @@ def generate_upper_and_lower_bounds(
                 slab_radii[class_idx])
 
             margin = y_b * (w.dot(x_b) + b)
-            if ((worst_margin is None) or (margin < worst_margin)):
+            if (worst_margin is None) or (margin < worst_margin):
                 worst_margin = margin
                 worst_y_b = y_b
                 worst_x_b = x_b
-                            
+
+        #####################
+        # Line 5 (2nd Half) #
+        #####################
+
         # Take the gradient with respect to that y
         if worst_margin < 1:
             grad_w -= epsilon * worst_y_b * worst_x_b
             grad_b -= epsilon * worst_y_b
-            
+
+        #####################
+        # Line 4 (2nd Half) #
+        #####################
+
+        # Loss due to malicious data
         bad_loss = hinge_loss(w, b, worst_x_b, worst_y_b)        
         
         # Store iterate to construct matching lower bound
         x_bs[iter_idx, :] = worst_x_b
         y_bs[iter_idx] = worst_y_b
 
+        #####################
+        # Line 4 (1st Half) #
+        #####################
+
+        # Loss due to clean data
         good_loss = hinge_loss(w, b, X_train, Y_train)
         params_norm_sq = (np.linalg.norm(w)**2 + b**2)
+
+        # Total Loss of the Poisoned Dataset
         total_loss = good_loss + epsilon * bad_loss
-        
+
         if best_upper_bound > total_loss:
             best_upper_bound = total_loss            
             best_upper_good_loss = good_loss
@@ -456,14 +535,20 @@ def generate_upper_and_lower_bounds(
                 print("  Sq norm of params_bias  : %s" % params_norm_sq)        
                 print("  Grad w norm             : %s" % np.linalg.norm(grad_w))
 
-        # Update outer minimization        
+        ##########
+        # Line 6 #
+        ##########
+
+        # Update Gradient (z[t] = z[t-1] - g[t])
         sum_of_grads_w -= grad_w
         sum_of_grads_b -= grad_b
 
+        # Update ?? (\lambda[t] = max(...))
         candidate_lambda = np.sqrt(np.linalg.norm(sum_of_grads_w)**2 + sum_of_grads_b**2) / np.sqrt(norm_sq_constraint)
         if candidate_lambda > current_lambda:
             current_lambda = candidate_lambda            
 
+        # Update Model (\theta[t] = z[t] / \lambda[t])
         w = sum_of_grads_w / current_lambda
         b = sum_of_grads_b / current_lambda
 
@@ -473,6 +558,7 @@ def generate_upper_and_lower_bounds(
     print("  Total loss              : %s" % best_upper_bound)
     print('')
 
+    # Determine Lower Bound from Candidate Attack Points
     X_modified, Y_modified, idx_train, idx_poison = sample_lower_bound_attack(
         X_train, Y_train, 
         x_bs, y_bs, 
@@ -511,9 +597,9 @@ def get_projection_matrix(w, centroid, centroid_vec):
 
     Parameters
     ----------
-    w : ???
-    centroid : ???
-    centroid_vec : ???
+    w : np.ndarray of shape (dimensions,)
+    centroid : np.ndarray of shape (classes, dimensions)
+    centroid_vec : np.ndarray of shape (dimensions,)
 
     Returns
     -------
@@ -535,16 +621,32 @@ def get_projection_matrix(w, centroid, centroid_vec):
 
 
 class Minimizer(object):
-    """ Minimizer ???
+    """ CVX Minimizer / Data Maximizer
+
+    This class determines the attack point the maximises the
+    loss constrained by the feasible set. This is the first
+    line of the loop in Algorithm 1.
+
+    For the sphere defense this is the optimization problem:
+        max_x   1 - y w^T x
+        s.t.    || x - c ||2 < r
+    For the slab defense this is the optimization problem:
+        max_x   1 - y w^T x
+        s.t.    |<x - c, c_vec>| < r
+    where
+        c :      class centroid
+        c_vec :  vector between the two class centroids
     """
 
     def __init__(self, use_sphere=True, use_slab=True):
-        """ Minimizer ???
+        """ Minimizer CVX Minimizer / Data Maximizer
 
         Parameters
         ----------
-        use_sphere
-        use_slab
+        use_sphere : bool
+            Use sphere projection?
+        use_slab : bool
+            Use slab projection?
         """
 
         d = 3
@@ -577,18 +679,25 @@ class Minimizer(object):
 
         Parameters
         ----------
-        y
-        w
-        centroid
-        centroid_vec
-        sphere_radius
-        slab_radius
-        verbose
+        y : int
+            Input label
+        w : np.ndarray of shape (dimensions,)
+            Coefficient
+        centroid : np.ndarray of shape (classes, dimensions)
+            Centroid for each class
+        centroid_vec : np.ndarray of shape (dimensions,)
+            Vector between the two centroids
+        sphere_radius : np.ndarray of shape (classes,)
+            Sphere radius for each class
+        slab_radius : np.ndarray of shape (classes,)
+            Slab radius for each class
+        verbose : bool
+            CVX verbose
 
         Returns
         -------
-        x :
-            Optimal x
+        x : np.ndarray
+            Optimal x;
         """
         P = get_projection_matrix(w, centroid, centroid_vec)    
         
@@ -611,6 +720,9 @@ class NearestPointFinder(object):
 
     We can speed this up by expressing the constraints in one dimension,
     but let's see how it goes first.
+
+    Solve the optimization problem:
+
     """
 
     def __init__(self, d):
@@ -661,19 +773,20 @@ class NearestPointFinder(object):
 
         Parameters
         ----------
-        y
-        g
-        theta
-        centroid
-        centroid_vec
-        sphere_radius
-        slab_radius
-        verbose
+        y : int
+        g : ??
+        theta :
+        centroid : np.ndarray of shape (classes, dimensions)
+        centroid_vec : np.ndarray of shape (dimensions,)
+        sphere_radius : np.ndarray of shape (classes,)
+        slab_radius : np.ndarray of shape (classes,)
+        verbose : bool
+            CVX verbose
 
         Returns
         -------
         c_opt :
-            ???
+            Optimal C value
         """
         self.cvx_y.value = y
         self.cvx_g.value = g.reshape(-1)
@@ -691,6 +804,9 @@ class NearestPointFinder(object):
 
 class Projector(object):
     """ Projector ???
+
+    Solves the optimization problem:
+        min_
     """
 
     def __init__(self, use_sphere=True, use_slab=True):
@@ -729,12 +845,12 @@ class Projector(object):
 
         Parameters
         ----------
-        z
-        centroid
-        centroid_vec
-        sphere_radius
-        slab_radius
-        verbose
+        z : ??
+        centroid : np.ndarray of shape (classes, dimension)
+        centroid_vec : np.ndarray of shape (dimensions,)
+        sphere_radius : np.ndarray of shape (classes,)
+        slab_radius : np.ndarray of shape (classes,)
+        verbose : bool
 
         Returns
         -------
@@ -742,7 +858,7 @@ class Projector(object):
             Data projected onto feasible set
         """
 
-        P = get_projection_matrix(z, centroid, centroid_vec)    
+        P = get_projection_matrix(z, centroid, centroid_vec)
         
         self.cvx_z.value = P.dot(z.reshape(-1))
         self.cvx_centroid.value = P.dot(centroid.reshape(-1))

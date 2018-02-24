@@ -8,7 +8,26 @@ import upper_bounds
 
 
 class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):        
+    """Numpy Encoder
+
+    Encode numpy object as JSON.
+    """
+    def default(self, obj):
+        """Override default encoder
+
+        If the object is a 1D numpy array, encode it as JSON array.
+        If the object is a numpy float, encode it as a JSON number.
+
+        Parameters
+        ----------
+        obj : nd.array, np.floating, or other type
+            Object to encode
+
+        Returns
+        -------
+        json : str
+            Encoded JSON blob
+        """
         if isinstance(obj, np.ndarray):
             assert len(np.shape(obj)) == 1  # Can only handle 1D ndarrays
             return obj.tolist()
@@ -19,10 +38,37 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def get_class_map():
-    return {-1: 0, 1: 1}
+    """ Get Mapping Between Class Labels and Indices
+
+    The labels are stores as either -1 or 0, but we sometimes need them as 0
+    or 1 for indexing into matrices. This "class map" makes it easy to convert
+    as you can run class_map(Y).
+
+    Returns
+    -------
+    class_map : dict
+        Class to index mapping
+    """
+    return {-1: 0, 1: 1}  # Store class -1 as index 0 and 1 and index 1
 
 
 def get_centroids(X, Y, class_map):
+    """ Get Centroids for Each Class
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    class_map : dict
+        Class to index mapping
+
+    Returns
+    -------
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroids of each class
+    """
     num_classes = len(set(Y))
     num_features = X.shape[1]
     centroids = np.zeros((num_classes, num_features))
@@ -32,6 +78,21 @@ def get_centroids(X, Y, class_map):
 
 
 def get_centroid_vec(centroids):
+    """ Get Centroids Vector
+
+    Get the unit vector that starts from the centroid of
+    class 1 and points toward the centroid of class -1.
+
+    Parameters
+    ----------
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroids of each class
+
+    Returns
+    -------
+    centroids_vec : np.ndarray of shape (1, dimensions)
+        Unit vector from centroid of class 1 to centroid of class -1
+    """
     assert centroids.shape[0] == 2
     centroid_vec = centroids[0, :] - centroids[1, :]
     centroid_vec /= np.linalg.norm(centroid_vec)
@@ -39,8 +100,29 @@ def get_centroid_vec(centroids):
     return centroid_vec
 
 
-# Can speed this up if necessary
 def get_sqrt_inv_cov(X, Y, class_map):
+    """ Get the Square Root of the Inverse Covariance Matrix for Each Class
+
+    For each class, calculate the square root of the inverse covariance matrix
+    of the features by singular value decomposition.
+
+    Note: Can speed this up if necessary
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances)
+        Input labels
+    class_map : dict
+        Class to index mapping
+
+    Returns
+    -------
+    sqrt_inv_covs : np.ndarray of shape (classes, instances, dimensions)
+        Square root of the inverse covariance matrix for each class
+
+    """
     num_classes = len(set(Y))
     num_features = X.shape[1]
     sqrt_inv_covs = np.zeros((num_classes, num_features, num_features))
@@ -53,8 +135,33 @@ def get_sqrt_inv_cov(X, Y, class_map):
     return sqrt_inv_covs
 
 
-# Can speed this up if necessary
-def get_data_params(X, Y, percentile):    
+def get_data_params(X, Y, percentile):
+    """Helper Function to Calculate Useful Properties About the Dataset
+
+    Note: Can speed this up if necessary
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    percentile : float
+        Percentage of data to keep when setting radii
+
+    Returns
+    -------
+    class_map : dict
+        Class to index mapping
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroids of each class
+    centroid_vec : np.ndarray of shape (dimensions,)
+        Unit vector from centroid of class 1 to centroid of class -1
+    sphere_radii : float
+        Radius of sphere defense so the percentile criteria is met
+    slab_radii : float
+        Radius of slab defense so the percentile criteria is met
+    """
     num_classes = len(set(Y))
     num_features = X.shape[1]
     centroids = np.zeros((num_classes, num_features))
@@ -86,6 +193,28 @@ def get_data_params(X, Y, percentile):
 
 
 def add_points(x, y, X, Y, num_copies=1):
+    """Add points to the dataset
+
+    Parameters
+    ----------
+    x : np.ndarray of shape (instances, dimensions)
+        Features of points to add
+    y : np.ndarray of shape (instances,)
+        Labels of points to add
+    X : np.ndarray of shape (instances, dimensions)
+        Dataset features
+    Y : np.ndarray of shape (instances)
+        Dataset labels
+    num_copies : int
+        Number of copies of the points to add
+
+    Returns
+    -------
+    X_modified : np.ndarray of shape (instances, dimensions)
+        Modified dataset features
+    Y_modified : np.ndarray of shape (instances,)
+        Modified dataset labels
+    """
     if num_copies == 0:
         return X, Y
 
@@ -105,7 +234,32 @@ def add_points(x, y, X, Y, num_copies=1):
 
 def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copies=1, 
                        random_seed=18, replace=False):
-    # Only copy from points where mask_to_choose_from == True
+    """ Copy Random Points from a Dataset
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    mask_to_choose_from : np.ndarray of shape (instances,) and dtype=bool
+        Only copy from points where mask_to_choose_from == True
+    target_class : int
+        Only copy from class target_class
+    num_copies: int
+        Number of points to copy
+    random_seed : int
+        Numpy random seed
+    replace : bool
+        Copy with replacement
+
+    Returns
+    -------
+    X_modified : np.ndarray of shape (instances, dimensions)
+        Copied dataset features
+    Y_modified : np.ndarray of shape (instances,)
+        Copied dataset labels
+    """
 
     np.random.seed(random_seed)    
     combined_mask = (np.array(Y, dtype=int) == target_class)
@@ -126,17 +280,70 @@ def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copie
     
 
 def threshold(X):
+    """ Set all Negative Values in X to 0
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+
+    Returns
+    -------
+    X_clip : np.ndarray of shape (instances, dimensions)
+        Clipped input features
+    """
     return np.clip(X, 0, np.max(X))
 
 
 def rround(X, random_seed=3):
+    """ Random Round
+
+    Randomly round number according to the fractional component.
+    E.g. The number 5.25 has a probability of 0.75 of being rounded
+    to 5 and a probability of 0.25 of being rounded to 6.
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    random_seed : int
+        Numpy random seed
+
+    Returns
+    -------
+    X_rround : np.ndarray of shape (instances, dimensions)
+    """
     X_frac, X_int = np.modf(X)
     X = X_int + (np.random.random_sample(X.shape) < X_frac)
     return X
 
 
 def project_onto_sphere(X, Y, radii, centroids, class_map):
+    """ Project Dataset onto Sphere
 
+    For each class, project the data onto a sphere with a
+    particular radius centered at the class centroid.
+
+    Note: If the data is already within the sphere, it is unchanged.
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    radii : np.ndarray of shape (classes,)
+        Sphere radius for each class
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroid of each class
+    class_map : dict
+        Class to index mapping
+
+    Returns
+    -------
+    X_proj : np.ndarray of shape (instances, dimensions)
+        Projected features onto sphere
+    """
     for y in set(Y):
         idx = class_map[y]        
         radius = radii[idx]
@@ -154,9 +361,34 @@ def project_onto_sphere(X, Y, radii, centroids, class_map):
  
 
 def project_onto_slab(X, Y, v, radii, centroids, class_map):
-    """
-    v^T x needs to be within radius of v^T centroid.
-    v is 1 x d and normalized.
+    """Project Dataset onto Slab
+
+    For each class, project the data a slab given by the equation
+
+    |<X - Centroid1, Centroid1 - Cendroid2>| <= Radius
+                     \ Centroid Vector v /
+
+    Note: If the data is already in the slab, it is unchanged.
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    v : np.ndarray of shape (1, dimensions)
+        Centroid vector (v^T x needs to be within radius of v^T centroid)
+    radii : np.ndarray of shape (classes,)
+        Slab radius for each class
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroid of each class
+    class_map : dict
+        Class to index mapping
+
+    Returns
+    -------
+    X_proj : np.ndarray of shape (instances, dimensions)
+        Projected features onto slab
     """
     v = np.reshape(v / np.linalg.norm(v), (1, -1))
 
@@ -177,16 +409,33 @@ def project_onto_slab(X, Y, v, radii, centroids, class_map):
 
     return X
 
-def get_projection_fn(
-    X_clean, 
-    Y_clean, 
-    sphere=True,
-    slab=True,
-    percentile=70):
+
+def get_projection_fn(X_clean, Y_clean, sphere=True, slab=True, percentile=70):
+    """ Get Projection Function
+
+    Parameters
+    ----------
+    X_clean : np.ndarray of shape (instances, dimensions)
+        Clean input features
+    Y_clean : np.ndarray of shape (instances,)
+        Clean input labels
+    sphere : bool
+        Use sphere projection?
+    slab : bool
+        Use slab projection?
+    percentile : float
+        Percentage of data to keep when setting radii
+
+    Returns
+    -------
+    project_onto_feasible_set : function
+        Function to project data onto the feasible set
+    """
 
     class_map, centroids, centroid_vec, sphere_radii, slab_radii = get_data_params(X_clean, Y_clean, percentile)
     if sphere and slab:
         projector = upper_bounds.Projector()
+
         def project_onto_feasible_set(X, Y):
             num_examples = X.shape[0]
             proj_X = np.zeros_like(X)
@@ -212,10 +461,34 @@ def get_projection_fn(
     return project_onto_feasible_set
 
 
-def filter_points_outside_feasible_set(X, Y, 
-                                       centroids, centroid_vec, 
-                                       sphere_radii, slab_radii,
-                                       class_map):
+def filter_points_outside_feasible_set(X, Y, centroids, centroid_vec, sphere_radii,
+                                       slab_radii, class_map):
+    """ Remove Points Outside of Feasible Set
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    centroids : np.ndarray of shape (classes, dimensions)
+        Centroid for each class
+    centroid_vec : np.ndarray of shape (1, dimensions)
+        Vector between centroids
+    sphere_radii : np.ndarray of shape (classes,)
+        Radii to use with sphere projection
+    slab_radii : np.ndarray of shape (classes,)
+        Radii to use with slab projection
+    class_map : dict
+        Class to index mapping
+
+    Returns
+    -------
+    X_filtered : np.ndarray of shape (instances, dimensions)
+        Filtered input features
+    Y_filtered : np.ndarray of shape (instances,)
+        Filtered input labels
+    """
     sphere_dists = defenses.compute_dists_under_Q(
         X, 
         Y, 

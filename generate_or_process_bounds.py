@@ -294,7 +294,7 @@ for epsilon_idx, epsilon in enumerate(epsilons):
             assert np.all(f['y_train'].reshape(-1) == Y_train)        
             assert np.all(f['y_test'].reshape(-1) == Y_test)
 
-            X_poison = f['X_pert'] # This is not stored as a sparse matrix
+            X_poison = f['X_pert']  # This is not stored as a sparse matrix
             Y_poison = f['y_pert'].reshape(-1)
 
             X_modified, Y_modified, idx_train, idx_poison = datasets.process_matlab_train_test(

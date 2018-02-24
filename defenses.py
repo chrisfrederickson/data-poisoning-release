@@ -13,21 +13,28 @@ import data_utils as data
 def remove_quantile(X, Y, dists, frac_to_remove):
     """ Remove Quantile
 
-    Removes the frac_to_remove points from X and Y with the highest value in dists.
-    This works separately for each class.
+    Removes points from the dataset with the highest distances according
+    to the fraction to remove. This works separately for each class.
 
     Parameters
     ----------
-    X
-    Y
-    dists
-    frac_to_remove
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    dists : np.ndarray of shape (instances,)
+        Distance from point to class centroid. (aka outlierness score)
+    frac_to_remove : float
+        Fraction of points to remove
 
     Returns
     -------
-    X_def
-    Y_def
-    idx_to_keep
+    X_def : np.ndarray of shape (instnaces, dimensions)
+        Defended features
+    Y_def : np.ndarray of shape (instances,)
+        Defended labels
+    idx_to_keep : list TODO Verify
+        Indices of the input data that is kept
 
     """
     if len(dists.shape) == 2: # Accept column vectors but reshape
@@ -63,23 +70,29 @@ def compute_dists_under_Q(X, Y, Q, subtract_from_l2=False,
 
     Computes ||Q(x - mu)|| in the corresponding norm.
     Returns a vector of length num_examples (X.shape[0]).
-    If centroids is not specified, calculate it from the data.
     If Q has dimension 3, then each class gets its own Q.
 
     Parameters
     ----------
-    X
-    Y
-    Q
-    subtract_from_l2
+    X : np.ndarray of shape (instances, dimensions)
+        Input features
+    Y : np.ndarray of shape (instances,)
+        Input labels
+    Q : ??? TODO
+        ??? TODO
+    subtract_from_l2 : bool
         If this is true, computes ||x - mu|| - ||Q(x - mu)||
-    centroids
-    class_map
-    norm
+    centroids : None or np.ndarray of shape (classes, dimensions)
+        Centroid for each class. If None, it will be calculated from the data.
+    class_map : dict
+        Class to index mapping
+    norm : int
+        Order of norm
 
     Returns
     -------
-    Q_dists
+    Q_dists : ??? TODO
+        ??? TODO
 
     """
     if (centroids is not None) or (class_map is not None): 
@@ -141,19 +154,22 @@ def compute_dists_under_Q(X, Y, Q, subtract_from_l2=False,
 
 
 class DataDef(object):
-    """Data Def ???"""
+    """Data Defense
+
+    Defenses that filter data outside of a feasible set.
+    """
 
     def __init__(self, X_modified, Y_modified, X_test, Y_test, idx_train, idx_poison):
-        """ Data Def ???
+        """ Data Defense
 
         Parameters
         ----------
-        X_modified
-        Y_modified
-        X_test
-        Y_test
-        idx_train
-        idx_poison
+        X_modified : np.ndarray of shape (instances, dimensions)
+        Y_modified : np.ndarray of shape (instances,)
+        X_test : np.ndarray of shape (instances, dimensions)
+        Y_test : np.ndarray of shape (instances,)
+        idx_train : np.ndarray of shape (instances,) TODO Verify
+        idx_poison : np.ndarray of shape (instances,) TODO Verify
         """
 
         self.X_modified = X_modified
@@ -177,16 +193,18 @@ class DataDef(object):
         # Fraction of bad data / good data (so in total, there's 1+epsilon * good data )
         self.epsilon = self.X_poison.shape[0] / self.X_train.shape[0]
 
-    def plot_dists(
-        self,
-        dists, 
-        num_bins=100):
-        """ Plot Distances
+    def plot_dists(self, dists, num_bins=100):
+        """ Plot Histogram of Distances
+
+        Visualise the approximate distribution of distances
+        by plotting a histogram of distance.
 
         Parameters
         ----------
-        dists
-        num_bins
+        dists : np.ndarray of shape (instances,)
+            Distances from each point to class centroid
+        num_bins : int
+            Number of bins in the histogram
         """
 
         dists_train = dists[self.idx_train]
@@ -200,7 +218,7 @@ class DataDef(object):
                 upper = np.max((np.max(dists_train), np.max(dists_poison))) * 1.1
                     
                 step = (upper - lower) / num_bins
-                bins=np.arange(lower, upper, step)
+                bins = np.arange(lower, upper, step)
                 plt.figure(figsize=(10, 5))
                 plt.title('y = %s (# clean points = %s, # poisoned points = %s)' % (y, np.sum(self.Y_train == y), np.sum(self.Y_poison == y)))
                 sns.distplot(dists_train[self.Y_train == y], kde=False, bins=bins)
@@ -212,24 +230,23 @@ class DataDef(object):
                     sns.distplot(dists_poison[self.Y_poison == y], kde=False, bins=bins)
                 plt.show()
 
-    def compute_dists_under_Q_over_dataset(
-        self,
-        Q,
-        subtract_from_l2=False, #If this is true, plots ||x - mu|| - ||Q(x - mu)||
-        use_emp_centroids=False,        
-        norm=2):
+    def compute_dists_under_Q_over_dataset(self, Q, subtract_from_l2=False,
+                                           use_emp_centroids=False, norm=2):
         """ Compute Distances under Q Over Dataset
 
         Parameters
         ----------
-        Q
-        subtract_from_l2
-        use_emp_centroids
-        norm
+        Q : ???
+        subtract_from_l2 : bool
+            If this is true, plots ||x - mu|| - ||Q(x - mu)||
+        use_emp_centroids : bool
+            Use empirical centroids from data?
+        norm : int
+            Order of the norm
 
         Returns
         -------
-        dists
+        dists : np.ndarray of shape (instances,) TODO Verify
         """
 
         if use_emp_centroids:
@@ -248,19 +265,23 @@ class DataDef(object):
         return dists
 
     def get_sqrt_inv_covs(self, use_emp=False):
-        """ Square Inverse Covariance ???
+        """ Calculate Square Inverse Covariance
+
+        See: :func:'~data_utils.get_sqrt_inv_cov'
 
         Parameters
         ----------
-        use_emp
+        use_emp : bool
+            Use empirical covariance
 
         Returns
         -------
-        sqrt_inv_covs
+        sqrt_inv_covs : np.ndarray of shape (classes, instances, dimensions)
+            Square root of the inverse covariance matrix for each class
         """
-        if use_emp:            
+        if use_emp:
             sqrt_inv_covs = data.get_sqrt_inv_cov(self.X_modified, self.Y_modified, self.class_map)
-        else:            
+        else:
             sqrt_inv_covs = data.get_sqrt_inv_cov(self.X_train, self.Y_train, self.class_map)
         return sqrt_inv_covs
 
@@ -269,11 +290,13 @@ class DataDef(object):
 
         Parameters
         ----------
-        num_neighbors
+        num_neighbors : int
+            Number of neighbors
 
         Returns
         -------
-        dists
+        dists : np.ndarray of shape (num_neighbors,) TODO This is actually the sum of the distnace to each neighbor
+            Distance to each neighbor
         """
         nbrs = neighbors.NearestNeighbors(
             n_neighbors=num_neighbors, 
@@ -295,14 +318,14 @@ class DataDef(object):
 
         Parameters
         ----------
-        k
-        use_emp
-        get_projected_data
+        k : int
+        use_emp : bool
+        get_projected_data : bool
 
         Returns
         -------
-        P
-        achieved_sv_ratio
+        P : ???
+        achieved_sv_ratio : ??
         PX_modified : ?? (optional)
         PX_train : ?? (optional)
         PX_poison : ?? (optional)
@@ -359,12 +382,15 @@ class DataDef(object):
 
         Parameters
         ----------
-        idx_to_keep
+        idx_to_keep : np.ndarray of shape (instances,) and dtype=bool
+            Indices of kept (not filtered) data
 
         Returns
         -------
-        frac_of_good_points_kept
-        frac_of_bad_points_kept
+        frac_of_good_points_kept : float
+            Fraction of clean points kept
+        frac_of_bad_points_kept : float
+            Fraction of malicious points kept
         """
         good_mask = np.zeros(self.X_modified.shape[0], dtype=bool)
         good_mask[self.idx_train] = True
@@ -383,18 +409,27 @@ class DataDef(object):
 
         Parameters
         ----------
-        dists
-        model
-        frac_to_remove
-        num_folds
+        dists : np.ndarray of shape (instances,)
+            Distances from points to class centroids
+        model : sklearn.base.BaseEstimator
+            Scikit-learn compatible model
+        frac_to_remove : float
+            Fraction of data to remove
+        num_folds : int
+            Number of cross-validation folds
 
         Returns
         -------
-        train_acc
-        mean_cv_score
-        test_acc
-        frac_of_good_points_kept
-        frac_of_bad_points_kept
+        train_acc : float
+            Training accuracy
+        mean_cv_score : float
+            Average cross-validation score (calculated from the score method of the model)
+        test_acc : float
+            Testing accuracy
+        frac_of_good_points_kept : float
+            Fraction of clean points kept
+        frac_of_bad_points_kept : float
+            Fraction of malicious points kept
         """
 
         X_def, Y_def, idx_to_keep = remove_quantile(
