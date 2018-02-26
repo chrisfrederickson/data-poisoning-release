@@ -1,0 +1,964 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>certpoison.upper_bounds &#8212; Certified Defenses for Data Poisoning Attacks 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for certpoison.upper_bounds</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Determine Upper Bounds&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="k">import</span> <span class="n">orth</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sparse</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">svm</span>
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cvx</span>
+
+
+<div class="viewcode-block" id="hinge_loss"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.hinge_loss">[docs]</a><span class="k">def</span> <span class="nf">hinge_loss</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">sample_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Calculate Hinge Loss</span>
+
+<span class="sd">    Calculates the hinge loss.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    w : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        Coefficients</span>
+<span class="sd">    b : float</span>
+<span class="sd">        Intercept</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input Features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input Labels</span>
+<span class="sd">    sample_weights : None or np.ndarray of shape (???)</span>
+<span class="sd">        ???</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    loss : float</span>
+<span class="sd">        Hinge loss</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">sample_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sample_weights</span> <span class="o">=</span> <span class="n">sample_weights</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sample_weights</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sample_weights</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Y</span> <span class="o">*</span> <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">),</span> <span class="mi">0</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Y</span> <span class="o">*</span> <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">),</span> <span class="mi">0</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="hinge_grad"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.hinge_grad">[docs]</a><span class="k">def</span> <span class="nf">hinge_grad</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gradient of Hinge Loss</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    w : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        Coefficients</span>
+<span class="sd">    b : float</span>
+<span class="sd">        Intercept</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input Features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input Labels</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    grad_w : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        Gradient of coefficients</span>
+<span class="sd">    grad_b : float</span>
+<span class="sd">        Gradient of intercept</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">margins</span> <span class="o">=</span> <span class="n">Y</span> <span class="o">*</span> <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+    <span class="n">sv_indicators</span> <span class="o">=</span> <span class="n">margins</span> <span class="o">&lt;</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">grad_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span> 
+            <span class="o">-</span><span class="n">sparse</span><span class="o">.</span><span class="n">diags</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">Y</span><span class="p">[</span><span class="n">sv_indicators</span><span class="p">],</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)))</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">[</span><span class="n">sv_indicators</span><span class="p">,</span> <span class="p">:])</span> <span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">grad_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grad_w</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>    
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grad_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span> 
+            <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">Y</span><span class="p">[</span><span class="n">sv_indicators</span><span class="p">],</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">X</span><span class="p">[</span><span class="n">sv_indicators</span><span class="p">,</span> <span class="p">:],</span>
+             <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="n">grad_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">Y</span><span class="p">[</span><span class="n">sv_indicators</span><span class="p">],</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span> <span class="o">/</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">return</span> <span class="n">grad_w</span><span class="p">,</span> <span class="n">grad_b</span></div>
+
+
+<div class="viewcode-block" id="sample_lower_bound_attack"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.sample_lower_bound_attack">[docs]</a><span class="k">def</span> <span class="nf">sample_lower_bound_attack</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">x_bs</span><span class="p">,</span> <span class="n">y_bs</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">num_iter_to_throw_out</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Create Poisoned Dataset from Pool of Malicious Data</span>
+
+<span class="sd">    Note that the clean and poisoned data order is not randomized.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_train : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Clean input features</span>
+<span class="sd">    Y_train : np.ndarray of shape (instances,)</span>
+<span class="sd">        Clean input labels</span>
+<span class="sd">    x_bs : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Pool of malicious input features</span>
+<span class="sd">    y_bs : np.ndarray of shape (instances,)</span>
+<span class="sd">        Pool of malicious input labels</span>
+<span class="sd">    epsilon : float</span>
+<span class="sd">        Desired fraction of malicious data to add</span>
+<span class="sd">    num_iter_to_throw_out : int</span>
+<span class="sd">        ???</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Poisoned features</span>
+<span class="sd">    Y_modified : no.ndarray of shape (instances,)</span>
+<span class="sd">        Poisoned labels</span>
+<span class="sd">    idx_train : np.ndarray of shape (instances,)</span>
+<span class="sd">        Indices of clean and poisoned data</span>
+<span class="sd">    idx_poison : np.ndarray of shape (instances,)</span>
+<span class="sd">        Indices of clean and poisoned data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">x_bs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">y_bs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">num_iter</span> <span class="o">=</span> <span class="n">x_bs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">num_iter_to_throw_out</span>
+
+    <span class="n">idx_to_sample</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span>
+        <span class="n">num_iter</span><span class="p">,</span> 
+        <span class="n">size</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">epsilon</span> <span class="o">*</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span>
+        <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">+</span> <span class="n">num_iter_to_throw_out</span>
+
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X_train</span><span class="p">):</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">X_train</span><span class="o">.</span><span class="n">toarray</span><span class="p">(),</span> <span class="n">x_bs</span><span class="p">[</span><span class="n">idx_to_sample</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">X_train</span><span class="p">,</span> <span class="n">x_bs</span><span class="p">[</span><span class="n">idx_to_sample</span><span class="p">,</span> <span class="p">:]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">Y_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">Y_train</span><span class="p">,</span> <span class="n">y_bs</span><span class="p">[</span><span class="n">idx_to_sample</span><span class="p">]))</span>
+
+    <span class="n">idx_train</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">idx_poison</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">X_modified</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> <span class="n">idx_train</span><span class="p">,</span> <span class="n">idx_poison</span></div>
+
+
+<div class="viewcode-block" id="svm_with_rho_squared"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.svm_with_rho_squared">[docs]</a><span class="k">def</span> <span class="nf">svm_with_rho_squared</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">,</span> <span class="n">upper_params_norm_sq</span><span class="p">,</span> <span class="n">use_bias</span><span class="p">,</span> 
+                         <span class="n">weight_decay</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Train Support Vector Machine</span>
+
+<span class="sd">    Trains an SVM that has params with squared norm roughly equals (and no larger) than</span>
+<span class="sd">    upper_params_norm_sq. It works by doing binary search on the weight_decay.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_train : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input training features</span>
+<span class="sd">    Y_train : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input training labels</span>
+<span class="sd">    X_test : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input testing features</span>
+<span class="sd">    Y_test : np.ndarray of shape (instances)</span>
+<span class="sd">        Input testing labels</span>
+<span class="sd">    upper_params_norm_sq : ???</span>
+<span class="sd">    use_bias : ???</span>
+<span class="sd">    weight_decay : float</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    train_loss : float</span>
+<span class="sd">        Training loss</span>
+<span class="sd">    train_acc : float</span>
+<span class="sd">        Training accuracy</span>
+<span class="sd">    test_loss : float</span>
+<span class="sd">        Testing loss</span>
+<span class="sd">    test_acc : float</span>
+<span class="sd">        Testing accuracu</span>
+<span class="sd">    params_norm_sq : ???</span>
+<span class="sd">    weight_decay : ???</span>
+<span class="sd">    params : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        Fit coefficients</span>
+<span class="sd">    bias : float</span>
+<span class="sd">        Fit intercept</span>
+<span class="sd">    svm_model : ???</span>
+<span class="sd">        Trained Support Vector Machine model</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rho_sq_tol</span> <span class="o">=</span> <span class="mf">0.01</span>
+    <span class="n">params_norm_sq</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">weight_decay</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lower_wd_bound</span> <span class="o">=</span> <span class="mf">0.001</span>
+        <span class="n">upper_wd_bound</span> <span class="o">=</span> <span class="mf">256.0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lower_wd_bound</span> <span class="o">=</span> <span class="mf">0.001</span>
+        <span class="n">upper_wd_bound</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">weight_decay</span><span class="p">)</span> <span class="o">-</span> <span class="n">lower_wd_bound</span>
+        <span class="k">if</span> <span class="n">upper_wd_bound</span> <span class="o">&lt;</span> <span class="n">lower_wd_bound</span><span class="p">:</span>
+            <span class="n">upper_wd_bound</span> <span class="o">=</span> <span class="n">lower_wd_bound</span>
+
+    <span class="n">lower_weight_decay</span> <span class="o">=</span> <span class="n">lower_wd_bound</span>
+    <span class="n">upper_weight_decay</span> <span class="o">=</span> <span class="n">upper_wd_bound</span>
+    <span class="n">weight_decay</span> <span class="o">=</span> <span class="p">(</span><span class="n">upper_weight_decay</span> <span class="o">+</span> <span class="n">lower_weight_decay</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="k">while</span> <span class="p">(</span>
+      <span class="p">(</span><span class="n">params_norm_sq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> 
+      <span class="p">(</span><span class="n">upper_params_norm_sq</span> <span class="o">&gt;</span> <span class="n">params_norm_sq</span><span class="p">)</span> <span class="ow">or</span> 
+      <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">upper_params_norm_sq</span> <span class="o">-</span> <span class="n">params_norm_sq</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">rho_sq_tol</span><span class="p">)):</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Trying weight_decay </span><span class="si">%s</span><span class="s1">..&#39;</span> <span class="o">%</span> <span class="n">weight_decay</span><span class="p">)</span>
+
+        <span class="n">C</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">weight_decay</span><span class="p">)</span>        
+        <span class="n">svm_model</span> <span class="o">=</span> <span class="n">svm</span><span class="o">.</span><span class="n">LinearSVC</span><span class="p">(</span>
+            <span class="n">C</span><span class="o">=</span><span class="n">C</span><span class="p">,</span>
+            <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+            <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;hinge&#39;</span><span class="p">,</span>
+            <span class="n">fit_intercept</span><span class="o">=</span><span class="n">use_bias</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+            <span class="n">max_iter</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">svm_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">svm_model</span><span class="o">.</span><span class="n">coef_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">bias</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">params_norm_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">params</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">bias</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="k">if</span> <span class="n">upper_params_norm_sq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Current params norm sq = </span><span class="si">%s</span><span class="s1">. Target = </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">params_norm_sq</span><span class="p">,</span> <span class="n">upper_params_norm_sq</span><span class="p">))</span>
+        <span class="c1"># Current params are too small; need to make them bigger</span>
+        <span class="c1"># So we should reduce weight_decay</span>
+        <span class="k">if</span> <span class="n">upper_params_norm_sq</span> <span class="o">&gt;</span> <span class="n">params_norm_sq</span><span class="p">:</span>
+            <span class="n">upper_weight_decay</span> <span class="o">=</span> <span class="n">weight_decay</span>
+
+            <span class="c1"># And if we are too close to the lower bound, we give up</span>
+            <span class="k">if</span> <span class="n">weight_decay</span> <span class="o">&lt;</span> <span class="n">lower_wd_bound</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Too close to lower bound, breaking&#39;</span><span class="p">)</span>                
+                <span class="k">break</span>
+
+        <span class="c1"># Current params are too big; need to make them smaller</span>
+        <span class="c1"># So we should increase weight_decay</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lower_weight_decay</span> <span class="o">=</span> <span class="n">weight_decay</span>
+
+            <span class="c1"># And if we are already too close to the upper bound, we should bump up the upper bound</span>
+            <span class="k">if</span> <span class="n">weight_decay</span> <span class="o">&gt;</span> <span class="n">upper_wd_bound</span> <span class="o">-</span> <span class="mf">1e-5</span><span class="p">:</span>
+                <span class="n">upper_wd_bound</span> <span class="o">*=</span> <span class="mi">2</span>
+                <span class="n">upper_weight_decay</span> <span class="o">*=</span> <span class="mi">2</span>       
+
+        <span class="k">if</span> <span class="p">(</span>
+          <span class="p">(</span><span class="n">upper_params_norm_sq</span> <span class="o">&gt;</span> <span class="n">params_norm_sq</span><span class="p">)</span> <span class="ow">or</span> 
+          <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">upper_params_norm_sq</span> <span class="o">-</span> <span class="n">params_norm_sq</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">rho_sq_tol</span><span class="p">)):</span>
+            <span class="n">weight_decay</span> <span class="o">=</span> <span class="p">(</span><span class="n">upper_weight_decay</span> <span class="o">+</span> <span class="n">lower_weight_decay</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="n">train_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+    <span class="n">test_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">)</span>
+
+    <span class="n">train_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+    <span class="n">test_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Train loss             : &#39;</span><span class="p">,</span> <span class="n">train_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Train acc              : &#39;</span><span class="p">,</span> <span class="n">train_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Test loss              : &#39;</span><span class="p">,</span> <span class="n">test_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Test acc               : &#39;</span><span class="p">,</span> <span class="n">test_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Sq norm of params+bias : &#39;</span><span class="p">,</span> <span class="n">params_norm_sq</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">train_loss</span><span class="p">,</span> <span class="n">train_acc</span><span class="p">,</span> <span class="n">test_loss</span><span class="p">,</span> <span class="n">test_acc</span><span class="p">,</span> <span class="n">params_norm_sq</span><span class="p">,</span> <span class="n">weight_decay</span><span class="p">,</span> \
+      <span class="n">params</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">svm_model</span></div>
+
+
+<div class="viewcode-block" id="evaluate_attack"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.evaluate_attack">[docs]</a><span class="k">def</span> <span class="nf">evaluate_attack</span><span class="p">(</span><span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">,</span> 
+                    <span class="n">idx_train</span><span class="p">,</span> <span class="n">idx_poison</span><span class="p">,</span> 
+                    <span class="n">epsilon</span><span class="p">,</span> <span class="n">weight_decay</span><span class="p">,</span>
+                    <span class="n">upper_params_norm_sq</span><span class="p">,</span>
+                    <span class="n">use_bias</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Evaluate Attack</span>
+
+<span class="sd">    Trains an SVM on the clean+poisoned data (by calling svm_with_rho_squared)</span>
+<span class="sd">    and then reports statistics on clean vs poisoned loss, etc.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Poisoned features</span>
+<span class="sd">    Y_modified : np.ndarray of shape (instances,)</span>
+<span class="sd">        Poisoned labels</span>
+<span class="sd">    X_test : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Testing features</span>
+<span class="sd">    Y_test : np.ndarray of shape (instances,)</span>
+<span class="sd">        Testing labels</span>
+<span class="sd">    idx_train : np.ndarray of shape (instances,)</span>
+<span class="sd">        ??</span>
+<span class="sd">    idx_poison : np.ndarray of shape (instances,)</span>
+<span class="sd">        Indices of malicious samples in the poisoned dataset</span>
+<span class="sd">    epsilon : float</span>
+<span class="sd">        Fraction of data to keep</span>
+<span class="sd">    weight_decay : float</span>
+<span class="sd">        Used to set SVM free parameters # TODO Clarify</span>
+<span class="sd">    upper_params_norm_sq : float</span>
+<span class="sd">        Used to set SVM free parameters TODO Clarify</span>
+<span class="sd">    use_bias : bool</span>
+<span class="sd">        Use bias in the SVM model</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    total_train_loss : float</span>
+<span class="sd">        Training loss on the poisoned dataset due to both clean and malicious data.</span>
+<span class="sd">    avg_good_train_loss : float</span>
+<span class="sd">        Training loss on only clean data.</span>
+<span class="sd">    avg_bad_train_loss : float</span>
+<span class="sd">        Training loss on only malicious data.</span>
+<span class="sd">    test_loss : float</span>
+<span class="sd">        Testing loss.</span>
+<span class="sd">    overall_train_acc : float</span>
+<span class="sd">        Training data accuracy on poisoned dataset due to both clean and malicious data.</span>
+<span class="sd">    good_train_acc : float</span>
+<span class="sd">        Training data accuracy on only clean data.</span>
+<span class="sd">    bad_train_acc : float</span>
+<span class="sd">        Training data accuracy on only malicious data.</span>
+<span class="sd">    test_acc : float</span>
+<span class="sd">        Testing data accuracy</span>
+<span class="sd">    params_norm_sq : float</span>
+<span class="sd">        Usef to determine SVM C # TODO Clarify</span>
+<span class="sd">    weight_decay : float</span>
+<span class="sd">        Used to determine SVM C # TODO Clarify</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X_train</span> <span class="o">=</span> <span class="n">X_modified</span><span class="p">[</span><span class="n">idx_train</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">Y_train</span> <span class="o">=</span> <span class="n">Y_modified</span><span class="p">[</span><span class="n">idx_train</span><span class="p">]</span>
+    <span class="n">X_poison</span> <span class="o">=</span> <span class="n">X_modified</span><span class="p">[</span><span class="n">idx_poison</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">Y_poison</span> <span class="o">=</span> <span class="n">Y_modified</span><span class="p">[</span><span class="n">idx_poison</span><span class="p">]</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">weight_decay</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">svm_model</span> <span class="o">=</span> \
+      <span class="n">svm_with_rho_squared</span><span class="p">(</span>
+        <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> 
+        <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">,</span> 
+        <span class="n">upper_params_norm_sq</span><span class="p">,</span> 
+        <span class="n">use_bias</span><span class="p">,</span> 
+        <span class="n">weight_decay</span><span class="p">)</span>
+
+    <span class="n">new_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">svm_model</span><span class="o">.</span><span class="n">coef_</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">new_bias</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">avg_bad_train_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span>
+        <span class="n">new_params</span><span class="p">,</span> 
+        <span class="n">new_bias</span><span class="p">,</span>
+        <span class="n">X_poison</span><span class="p">,</span>
+        <span class="n">Y_poison</span><span class="p">)</span>
+    <span class="n">avg_good_train_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span>
+        <span class="n">new_params</span><span class="p">,</span> 
+        <span class="n">new_bias</span><span class="p">,</span>
+        <span class="n">X_train</span><span class="p">,</span>
+        <span class="n">Y_train</span><span class="p">)</span>
+    <span class="n">params_norm_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">new_params</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">new_bias</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">total_train_loss</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">hinge_loss</span><span class="p">(</span>
+            <span class="n">new_params</span><span class="p">,</span> 
+            <span class="n">new_bias</span><span class="p">,</span> 
+            <span class="n">X_modified</span><span class="p">,</span> 
+            <span class="n">Y_modified</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">epsilon</span><span class="p">)</span>
+
+    <span class="n">overall_train_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">)</span>
+    <span class="n">bad_train_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_poison</span><span class="p">,</span> <span class="n">Y_poison</span><span class="p">)</span>
+    <span class="n">good_train_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+    <span class="n">test_acc</span> <span class="o">=</span> <span class="n">svm_model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">)</span>
+    <span class="n">test_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span><span class="n">new_params</span><span class="p">,</span> <span class="n">new_bias</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">)</span>
+
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Lower bound:&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Overall train loss (w/o reg)    : &#39;</span><span class="p">,</span> <span class="n">total_train_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Overall train acc      : &#39;</span><span class="p">,</span> <span class="n">overall_train_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Avg train loss (bad)   : &#39;</span><span class="p">,</span> <span class="n">avg_bad_train_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Train acc (bad)        : &#39;</span><span class="p">,</span> <span class="n">bad_train_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Avg train loss (clean) : &#39;</span><span class="p">,</span> <span class="n">avg_good_train_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Train acc (clean)      : &#39;</span><span class="p">,</span> <span class="n">good_train_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Sq norm of params+bias : &#39;</span><span class="p">,</span> <span class="n">params_norm_sq</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Test loss              : &#39;</span><span class="p">,</span> <span class="n">test_loss</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Test acc               : &#39;</span><span class="p">,</span> <span class="n">test_acc</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">total_train_loss</span><span class="p">,</span> <span class="n">avg_good_train_loss</span><span class="p">,</span> <span class="n">avg_bad_train_loss</span><span class="p">,</span> <span class="n">test_loss</span><span class="p">,</span> \
+           <span class="n">overall_train_acc</span><span class="p">,</span> <span class="n">good_train_acc</span><span class="p">,</span> <span class="n">bad_train_acc</span><span class="p">,</span> <span class="n">test_acc</span><span class="p">,</span> \
+           <span class="n">params_norm_sq</span><span class="p">,</span> <span class="n">weight_decay</span></div>
+
+
+<div class="viewcode-block" id="generate_upper_and_lower_bounds"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.generate_upper_and_lower_bounds">[docs]</a><span class="k">def</span> <span class="nf">generate_upper_and_lower_bounds</span><span class="p">(</span>
+    <span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span>
+    <span class="n">norm_sq_constraint</span><span class="p">,</span> 
+    <span class="n">epsilon</span><span class="p">,</span>
+    <span class="n">max_iter</span><span class="p">,</span>
+    <span class="n">num_iter_to_throw_out</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="p">,</span>
+    <span class="n">init_w</span><span class="p">,</span> <span class="n">init_b</span><span class="p">,</span>
+    <span class="n">class_map</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> 
+    <span class="n">sphere_radii</span><span class="p">,</span> <span class="n">slab_radii</span><span class="p">,</span>
+    <span class="n">minimizer</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">print_interval</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate Upper and Lower Bounds</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_train : :obj:&#39;np.ndarray&#39; of shape (instances, dimensions)</span>
+<span class="sd">    Y_train : np.ndarray of shape (instances,)</span>
+<span class="sd">    norm_sq_constraint : float</span>
+<span class="sd">    epsilon : float</span>
+<span class="sd">    max_iter : int</span>
+<span class="sd">    num_iter_to_throw_out : int</span>
+<span class="sd">    learning_rate : float</span>
+<span class="sd">    init_w : np.ndarray of shape (dimensions)</span>
+<span class="sd">    init_b : float</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">    centroid_vec : np.ndarray of shape (1, dimensions)</span>
+<span class="sd">    sphere_radii : np.ndarray of shape (classes,)</span>
+<span class="sd">    slab_radii : np.ndarray of shape (classes,)</span>
+<span class="sd">    minimizer : Minimizer</span>
+<span class="sd">    verbose : bool</span>
+<span class="sd">    print_interval : int</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">    Y_modified : np.ndarray of shape (instances,)</span>
+<span class="sd">    idx_train : np.ndarray of shape (instances,)</span>
+<span class="sd">    idx_poison : np.ndarray of shape (instances,)</span>
+<span class="sd">    best_upper_bound : float</span>
+<span class="sd">    best_upper_good_loss : float</span>
+<span class="sd">    best_upper_bad_loss : float</span>
+<span class="sd">    best_upper_good_acc : float</span>
+<span class="sd">    best_upper_bad_acc : float</span>
+<span class="sd">    best_upper_params_norm_sq :float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Initialize Variables as 0</span>
+    <span class="n">x_bs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">max_iter</span><span class="p">,</span> <span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">y_bs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">max_iter</span><span class="p">)</span>
+    <span class="n">sum_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1">##########</span>
+    <span class="c1"># Line 1 #</span>
+    <span class="c1">##########</span>
+
+    <span class="c1"># Initialize Sum of Gradients (z)</span>
+    <span class="n">sum_of_grads_w_sq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">sum_of_grads_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">sum_of_grads_b</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Initialize Upper Bound (U*)</span>
+    <span class="n">best_upper_bound</span> <span class="o">=</span> <span class="mi">10000</span>
+
+    <span class="c1"># Initialize ??? (\lambda)</span>
+    <span class="n">current_lambda</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">learning_rate</span>
+
+    <span class="c1"># Initialize Model (\theta)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">init_w</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">init_b</span>
+
+    <span class="c1">##########</span>
+    <span class="c1"># Line 2 #</span>
+    <span class="c1">##########</span>
+
+    <span class="k">for</span> <span class="n">iter_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_iter</span><span class="p">):</span>
+
+        <span class="c1">#####################</span>
+        <span class="c1"># Line 5 (1st Half) #</span>
+        <span class="c1">#####################</span>
+
+        <span class="c1"># Calculate gradient of loss</span>
+        <span class="n">grad_w</span><span class="p">,</span> <span class="n">grad_b</span> <span class="o">=</span> <span class="n">hinge_grad</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="n">iter_idx</span> <span class="o">%</span> <span class="n">print_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;At iter </span><span class="si">%s</span><span class="s2">:&quot;</span> <span class="o">%</span> <span class="n">iter_idx</span><span class="p">)</span>
+
+        <span class="c1">##########</span>
+        <span class="c1"># Line 3 #</span>
+        <span class="c1">##########</span>
+
+        <span class="c1"># Find the attack point that maximizes loss function.</span>
+        <span class="c1"># We do not know which class gives the maximum loss.</span>
+        <span class="c1"># Pick the class with the worse (more negative) margin.</span>
+        <span class="n">worst_margin</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">y_b</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y_train</span><span class="p">):</span>
+
+            <span class="n">class_idx</span> <span class="o">=</span> <span class="n">class_map</span><span class="p">[</span><span class="n">y_b</span><span class="p">]</span>
+            <span class="n">x_b</span> <span class="o">=</span> <span class="n">minimizer</span><span class="o">.</span><span class="n">minimize_over_feasible_set</span><span class="p">(</span>
+                <span class="n">y_b</span><span class="p">,</span> 
+                <span class="n">w</span><span class="p">,</span> 
+                <span class="n">centroids</span><span class="p">[</span><span class="n">class_idx</span><span class="p">,</span> <span class="p">:],</span> 
+                <span class="n">centroid_vec</span><span class="p">,</span> 
+                <span class="n">sphere_radii</span><span class="p">[</span><span class="n">class_idx</span><span class="p">],</span> 
+                <span class="n">slab_radii</span><span class="p">[</span><span class="n">class_idx</span><span class="p">])</span>
+
+            <span class="n">margin</span> <span class="o">=</span> <span class="n">y_b</span> <span class="o">*</span> <span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x_b</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">worst_margin</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">margin</span> <span class="o">&lt;</span> <span class="n">worst_margin</span><span class="p">):</span>
+                <span class="n">worst_margin</span> <span class="o">=</span> <span class="n">margin</span>
+                <span class="n">worst_y_b</span> <span class="o">=</span> <span class="n">y_b</span>
+                <span class="n">worst_x_b</span> <span class="o">=</span> <span class="n">x_b</span>
+
+        <span class="c1">#####################</span>
+        <span class="c1"># Line 5 (2nd Half) #</span>
+        <span class="c1">#####################</span>
+
+        <span class="c1"># Take the gradient with respect to that y</span>
+        <span class="k">if</span> <span class="n">worst_margin</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">grad_w</span> <span class="o">-=</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">worst_y_b</span> <span class="o">*</span> <span class="n">worst_x_b</span>
+            <span class="n">grad_b</span> <span class="o">-=</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">worst_y_b</span>
+
+        <span class="c1">#####################</span>
+        <span class="c1"># Line 4 (2nd Half) #</span>
+        <span class="c1">#####################</span>
+
+        <span class="c1"># Loss due to malicious data</span>
+        <span class="n">bad_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">worst_x_b</span><span class="p">,</span> <span class="n">worst_y_b</span><span class="p">)</span>        
+        
+        <span class="c1"># Store iterate to construct matching lower bound</span>
+        <span class="n">x_bs</span><span class="p">[</span><span class="n">iter_idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">worst_x_b</span>
+        <span class="n">y_bs</span><span class="p">[</span><span class="n">iter_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">worst_y_b</span>
+
+        <span class="c1">#####################</span>
+        <span class="c1"># Line 4 (1st Half) #</span>
+        <span class="c1">#####################</span>
+
+        <span class="c1"># Loss due to clean data</span>
+        <span class="n">good_loss</span> <span class="o">=</span> <span class="n">hinge_loss</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">)</span>
+        <span class="n">params_norm_sq</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">b</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># Total Loss of the Poisoned Dataset</span>
+        <span class="n">total_loss</span> <span class="o">=</span> <span class="n">good_loss</span> <span class="o">+</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">bad_loss</span>
+
+        <span class="k">if</span> <span class="n">best_upper_bound</span> <span class="o">&gt;</span> <span class="n">total_loss</span><span class="p">:</span>
+            <span class="n">best_upper_bound</span> <span class="o">=</span> <span class="n">total_loss</span>            
+            <span class="n">best_upper_good_loss</span> <span class="o">=</span> <span class="n">good_loss</span>
+            <span class="n">best_upper_bad_loss</span> <span class="o">=</span> <span class="n">bad_loss</span>
+            <span class="n">best_upper_params_norm_sq</span> <span class="o">=</span> <span class="n">params_norm_sq</span>
+            <span class="n">best_upper_good_acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">Y_train</span> <span class="o">*</span> <span class="p">(</span><span class="n">X_train</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">worst_margin</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">best_upper_bad_acc</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="k">else</span><span class="p">:</span> 
+                <span class="n">best_upper_bad_acc</span> <span class="o">=</span> <span class="mf">0.0</span>            
+            
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">if</span> <span class="n">iter_idx</span> <span class="o">%</span> <span class="n">print_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Bad margin (</span><span class="si">%s</span><span class="s2">)         : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">worst_y_b</span><span class="p">,</span> <span class="n">worst_margin</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Bad loss (</span><span class="si">%s</span><span class="s2">)           : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">worst_y_b</span><span class="p">,</span> <span class="n">bad_loss</span><span class="p">))</span>                
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Good loss               : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">good_loss</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Total loss              : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">total_loss</span><span class="p">)</span>                
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Sq norm of params_bias  : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">params_norm_sq</span><span class="p">)</span>        
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Grad w norm             : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">grad_w</span><span class="p">))</span>
+
+        <span class="c1">##########</span>
+        <span class="c1"># Line 6 #</span>
+        <span class="c1">##########</span>
+
+        <span class="c1"># Update Gradient (z[t] = z[t-1] - g[t])</span>
+        <span class="n">sum_of_grads_w</span> <span class="o">-=</span> <span class="n">grad_w</span>
+        <span class="n">sum_of_grads_b</span> <span class="o">-=</span> <span class="n">grad_b</span>
+
+        <span class="c1"># Update ?? (\lambda[t] = max(...))</span>
+        <span class="n">candidate_lambda</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">sum_of_grads_w</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">sum_of_grads_b</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">norm_sq_constraint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">candidate_lambda</span> <span class="o">&gt;</span> <span class="n">current_lambda</span><span class="p">:</span>
+            <span class="n">current_lambda</span> <span class="o">=</span> <span class="n">candidate_lambda</span>            
+
+        <span class="c1"># Update Model (\theta[t] = z[t] / \lambda[t])</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">sum_of_grads_w</span> <span class="o">/</span> <span class="n">current_lambda</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">sum_of_grads_b</span> <span class="o">/</span> <span class="n">current_lambda</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimization run for </span><span class="si">%s</span><span class="s1"> iterations&#39;</span> <span class="o">%</span> <span class="n">max_iter</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Final upper bound:&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Total loss              : </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">best_upper_bound</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Determine Lower Bound from Candidate Attack Points</span>
+    <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> <span class="n">idx_train</span><span class="p">,</span> <span class="n">idx_poison</span> <span class="o">=</span> <span class="n">sample_lower_bound_attack</span><span class="p">(</span>
+        <span class="n">X_train</span><span class="p">,</span> <span class="n">Y_train</span><span class="p">,</span> 
+        <span class="n">x_bs</span><span class="p">,</span> <span class="n">y_bs</span><span class="p">,</span> 
+        <span class="n">epsilon</span><span class="p">,</span> 
+        <span class="n">num_iter_to_throw_out</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> <span class="n">idx_train</span><span class="p">,</span> <span class="n">idx_poison</span><span class="p">,</span> \
+      <span class="n">best_upper_bound</span><span class="p">,</span> \
+      <span class="n">best_upper_good_loss</span><span class="p">,</span> <span class="n">best_upper_bad_loss</span><span class="p">,</span> \
+      <span class="n">best_upper_good_acc</span><span class="p">,</span> <span class="n">best_upper_bad_acc</span><span class="p">,</span> \
+      <span class="n">best_upper_params_norm_sq</span></div>
+
+<span class="c1">###################</span>
+<span class="c1"># Minimizer / CVX #</span>
+<span class="c1">###################</span>
+
+
+<div class="viewcode-block" id="cvx_dot"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.cvx_dot">[docs]</a><span class="k">def</span> <span class="nf">cvx_dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; CVX Dot Product</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : ???</span>
+<span class="sd">    b : ???</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dot : ???</span>
+<span class="sd">        Dot product of a and b</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">cvx</span><span class="o">.</span><span class="n">sum_entries</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">mul_elemwise</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="get_projection_matrix"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.get_projection_matrix">[docs]</a><span class="k">def</span> <span class="nf">get_projection_matrix</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get Projection Matrix</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    w : np.ndarray of shape (dimensions,)</span>
+<span class="sd">    centroid : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">    centroid_vec : np.ndarray of shape (dimensions,)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    P : np.ndarray of shape (3, dimensions)</span>
+<span class="sd">        Projection matrix that projects a vector onto the subspace spanned by</span>
+<span class="sd">            w, centroid, and centroid_vec</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">subspace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">centroid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">centroid_vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">orth</span><span class="p">(</span><span class="n">subspace</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">while</span> <span class="n">P</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">P</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">P</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">orth</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">return</span> <span class="n">P</span></div>
+
+
+<div class="viewcode-block" id="Minimizer"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.Minimizer">[docs]</a><span class="k">class</span> <span class="nc">Minimizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; CVX Minimizer / Data Maximizer</span>
+
+<span class="sd">    This class determines the attack point the maximises the</span>
+<span class="sd">    loss constrained by the feasible set. This is the first</span>
+<span class="sd">    line of the loop in Algorithm 1.</span>
+
+<span class="sd">    For the sphere defense this is the optimization problem:</span>
+
+<span class="sd">    .. math</span>
+<span class="sd">        max_x &amp;  1 - y w^T x</span>
+<span class="sd">        s.t.  &amp;  || x - c ||2 &lt; r</span>
+
+<span class="sd">    For the slab defense this is the optimization problem:</span>
+
+<span class="sd">    .. math</span>
+<span class="sd">        max_x &amp; 1 - y w^T x</span>
+<span class="sd">        s.t.  &amp;  |&lt;x - c, c_vec&gt;| &lt; r</span>
+
+<span class="sd">    where</span>
+<span class="sd">        c :      class centroid</span>
+<span class="sd">        c_vec :  vector between the two class centroids</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_sphere</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_slab</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Minimizer CVX Minimizer / Data Maximizer</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        use_sphere : bool</span>
+<span class="sd">            Use sphere projection?</span>
+<span class="sd">        use_slab : bool</span>
+<span class="sd">            Use slab projection?</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_w</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">use_sphere</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_slab</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">cvx_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span> <span class="o">*</span> <span class="n">cvx_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_w</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Minimizer.minimize_over_feasible_set"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.Minimizer.minimize_over_feasible_set">[docs]</a>    <span class="k">def</span> <span class="nf">minimize_over_feasible_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radius</span><span class="p">,</span> <span class="n">slab_radius</span><span class="p">,</span>
+                                   <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Minimize over Feasible Set</span>
+
+<span class="sd">        Includes both sphere and slab.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y : int</span>
+<span class="sd">            Input label</span>
+<span class="sd">        w : np.ndarray of shape (dimensions,)</span>
+<span class="sd">            Coefficient</span>
+<span class="sd">        centroid : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">            Centroid for each class</span>
+<span class="sd">        centroid_vec : np.ndarray of shape (dimensions,)</span>
+<span class="sd">            Vector between the two centroids</span>
+<span class="sd">        sphere_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">            Sphere radius for each class</span>
+<span class="sd">        slab_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">            Slab radius for each class</span>
+<span class="sd">        verbose : bool</span>
+<span class="sd">            CVX verbose</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        x : np.ndarray</span>
+<span class="sd">            Optimal x;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">get_projection_matrix</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">)</span>    
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_w</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid_vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">sphere_radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">slab_radius</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="n">x_opt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">x_opt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="NearestPointFinder"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.NearestPointFinder">[docs]</a><span class="k">class</span> <span class="nc">NearestPointFinder</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Nearest Point Finder</span>
+
+<span class="sd">    We can speed this up by expressing the constraints in one dimension,</span>
+<span class="sd">    but let&#39;s see how it goes first.</span>
+
+<span class="sd">    Solve the optimization problem:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Nearest Point Finder</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        d : ???</span>
+<span class="sd">            ???</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_c</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_g</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_theta</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># want grad of poisoned point = -g</span>
+        <span class="c1"># grad of point (cyg, y) = -cg</span>
+        <span class="c1"># so we want to find c &gt; 0 such that n_poison/n * -cg = -g with 0 &lt; n_poison as low as possible </span>
+        <span class="c1"># and (cyg, y) in the feasible set.</span>
+        <span class="c1"># since n_poison/n &gt; 0, c must &gt; 0. Then n_poison/n = 1/c, </span>
+        <span class="c1"># so we want c to be as large as possible.</span>
+        <span class="c1"># As a sanity check, we know that g itself is in conv(feasible set of gradients).</span>
+        <span class="c1"># We can hope that either (-g, 1) or (g, -1) is in the feasible set of inputs,</span>
+        <span class="c1"># because the gradients at each of those points is g</span>
+        <span class="c1"># so if we let c = -1 then this should work.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_c</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_g</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">cvx</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="p">,</span> 
+            <span class="n">cvx</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">cvx_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span> <span class="o">*</span> <span class="n">cvx_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_theta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cvx_c</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_c</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NearestPointFinder.find_nearest_point"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.NearestPointFinder.find_nearest_point">[docs]</a>    <span class="k">def</span> <span class="nf">find_nearest_point</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> 
+                           <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radius</span><span class="p">,</span> <span class="n">slab_radius</span><span class="p">,</span>
+                           <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Find Nearest Point</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y : int</span>
+<span class="sd">        g : ??</span>
+<span class="sd">        theta :</span>
+<span class="sd">        centroid : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        centroid_vec : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        sphere_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">        slab_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">        verbose : bool</span>
+<span class="sd">            CVX verbose</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        c_opt :</span>
+<span class="sd">            Optimal C value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_y</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_g</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_theta</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">theta</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">centroid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">centroid_vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">sphere_radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">slab_radius</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="n">c_opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_c</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">c_opt</span></div></div>
+
+
+<div class="viewcode-block" id="Projector"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.Projector">[docs]</a><span class="k">class</span> <span class="nc">Projector</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Projector ???</span>
+
+<span class="sd">    Solves the optimization problem:</span>
+<span class="sd">    TODO</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_sphere</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_slab</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Projector ???</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        use_sphere</span>
+<span class="sd">        use_slab</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_z</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">use_sphere</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_slab</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">cvx_dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_x_c</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="n">cvx</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cvx_z</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>        
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span> <span class="o">=</span> <span class="n">cvx</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Projector.project_onto_feasible_set"><a class="viewcode-back" href="../../api.html#certpoison.upper_bounds.Projector.project_onto_feasible_set">[docs]</a>    <span class="k">def</span> <span class="nf">project_onto_feasible_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radius</span><span class="p">,</span> <span class="n">slab_radius</span><span class="p">,</span>
+                                   <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Project onto Feasible Set</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        z : ??</span>
+<span class="sd">        centroid : np.ndarray of shape (classes, dimension)</span>
+<span class="sd">        centroid_vec : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        sphere_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">        slab_radius : np.ndarray of shape (classes,)</span>
+<span class="sd">        verbose : bool</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        x_proj :</span>
+<span class="sd">            Data projected onto feasible set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">P</span> <span class="o">=</span> <span class="n">get_projection_matrix</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_z</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_centroid_vec</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">P</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid_vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_sphere_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">sphere_radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cvx_slab_radius</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">slab_radius</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+        <span class="n">x_opt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cvx_x</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">x_opt</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Website and modified code by: Christopher Frederickson. Based on work by: Jacob Steinhardt, Pang Wei Koh, and Percy Liang..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

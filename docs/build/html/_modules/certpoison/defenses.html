@@ -1,0 +1,541 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>certpoison.defenses &#8212; Certified Defenses for Data Poisoning Attacks 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for certpoison.defenses</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Defenses&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn</span> <span class="k">import</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">model_selection</span><span class="p">,</span> <span class="n">neighbors</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">scipy.linalg</span> <span class="k">as</span> <span class="nn">slin</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">as</span> <span class="nn">sparselin</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sparse</span>
+<span class="kn">from</span> <span class="nn">certpoison</span> <span class="k">import</span> <span class="n">data_utils</span> <span class="k">as</span> <span class="n">data</span>
+
+
+<div class="viewcode-block" id="remove_quantile"><a class="viewcode-back" href="../../api.html#certpoison.defenses.remove_quantile">[docs]</a><span class="k">def</span> <span class="nf">remove_quantile</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">dists</span><span class="p">,</span> <span class="n">frac_to_remove</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Remove Quantile</span>
+
+<span class="sd">    Removes points from the dataset with the highest distances according</span>
+<span class="sd">    to the fraction to remove. This works separately for each class.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    dists : np.ndarray of shape (instances,)</span>
+<span class="sd">        Distance from point to class centroid. (aka outlierness score)</span>
+<span class="sd">    frac_to_remove : float</span>
+<span class="sd">        Fraction of points to remove</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_def : np.ndarray of shape (instnaces, dimensions)</span>
+<span class="sd">        Defended features</span>
+<span class="sd">    Y_def : np.ndarray of shape (instances,)</span>
+<span class="sd">        Defended labels</span>
+<span class="sd">    idx_to_keep : list TODO Verify</span>
+<span class="sd">        Indices of the input data that is kept</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dists</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># Accept column vectors but reshape</span>
+        <span class="k">assert</span> <span class="n">dists</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dists</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>               
+    
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">dists</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="k">assert</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">Y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dists</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">frac_to_remove</span>
+    <span class="k">assert</span> <span class="n">frac_to_remove</span> <span class="o">&lt;=</span> <span class="mi">1</span>
+
+    <span class="n">frac_to_keep</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">frac_to_remove</span>
+
+    <span class="n">idx_to_keep</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span> 
+        <span class="n">num_to_keep</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">frac_to_keep</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">)))</span>
+
+        <span class="n">idx_to_keep</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> 
+            <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">])[:</span><span class="n">num_to_keep</span><span class="p">]])</span>
+
+    <span class="n">idx_to_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">idx_to_keep</span><span class="p">)</span>
+
+    <span class="n">X_def</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_to_keep</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">Y_def</span> <span class="o">=</span> <span class="n">Y</span><span class="p">[</span><span class="n">idx_to_keep</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">X_def</span><span class="p">,</span> <span class="n">Y_def</span><span class="p">,</span> <span class="n">idx_to_keep</span></div>
+
+
+<div class="viewcode-block" id="compute_dists_under_Q"><a class="viewcode-back" href="../../api.html#certpoison.defenses.compute_dists_under_Q">[docs]</a><span class="k">def</span> <span class="nf">compute_dists_under_Q</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">subtract_from_l2</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                          <span class="n">centroids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">class_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute Distances Under Q</span>
+
+<span class="sd">    Computes ||Q(x - mu)|| in the corresponding norm.</span>
+<span class="sd">    Returns a vector of length num_examples (X.shape[0]).</span>
+<span class="sd">    If Q has dimension 3, then each class gets its own Q.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    Q : ??? TODO</span>
+<span class="sd">        ??? TODO</span>
+<span class="sd">    subtract_from_l2 : bool</span>
+<span class="sd">        If this is true, computes ||x - mu|| - ||Q(x - mu)||</span>
+<span class="sd">    centroids : None or np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroid for each class. If None, it will be calculated from the data.</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+<span class="sd">    norm : int</span>
+<span class="sd">        Order of norm</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Q_dists : ??? TODO</span>
+<span class="sd">        ??? TODO</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">centroids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">class_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span> 
+        <span class="k">assert</span> <span class="p">(</span><span class="n">centroids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">class_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">subtract_from_l2</span><span class="p">:</span> 
+        <span class="k">assert</span> <span class="n">Q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">Q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">class_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">assert</span> <span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">class_map</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">norm</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">metric</span> <span class="o">=</span> <span class="s1">&#39;manhattan&#39;</span>
+    <span class="k">elif</span> <span class="n">norm</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">metric</span> <span class="o">=</span> <span class="s1">&#39;euclidean&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;norm must be 1 or 2&#39;</span><span class="p">)</span>
+
+    <span class="n">Q_dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">subtract_from_l2</span><span class="p">:</span>
+        <span class="n">L2_dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>    
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span> 
+        <span class="k">if</span> <span class="n">centroids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">centroids</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">],</span> <span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">Q</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>   <span class="c1"># assume Q = identity  </span>
+            <span class="n">Q_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">pairwise</span><span class="o">.</span><span class="n">pairwise_distances</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:],</span>
+                <span class="n">mu</span><span class="p">,</span>
+                <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Q</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">current_Q</span> <span class="o">=</span> <span class="n">Q</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">current_Q</span> <span class="o">=</span> <span class="n">Q</span>
+
+            <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+                <span class="n">XQ</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">current_Q</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">XQ</span> <span class="o">=</span> <span class="n">current_Q</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">muQ</span> <span class="o">=</span> <span class="n">current_Q</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">mu</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+            <span class="n">Q_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">pairwise</span><span class="o">.</span><span class="n">pairwise_distances</span><span class="p">(</span>
+                <span class="n">XQ</span><span class="p">,</span>
+                <span class="n">muQ</span><span class="p">,</span>
+                <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">subtract_from_l2</span><span class="p">:</span>
+                <span class="n">L2_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">pairwise</span><span class="o">.</span><span class="n">pairwise_distances</span><span class="p">(</span>
+                    <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:],</span>
+                    <span class="n">mu</span><span class="p">,</span>
+                    <span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">Q_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">L2_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">Q_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">Q_dists</span></div>
+
+
+<div class="viewcode-block" id="DataDef"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef">[docs]</a><span class="k">class</span> <span class="nc">DataDef</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Data Defense</span>
+
+<span class="sd">    Defenses that filter data outside of a feasible set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">Y_test</span><span class="p">,</span> <span class="n">idx_train</span><span class="p">,</span> <span class="n">idx_poison</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Data Defense</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Y_modified : np.ndarray of shape (instances,)</span>
+<span class="sd">        X_test : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Y_test : np.ndarray of shape (instances,)</span>
+<span class="sd">        idx_train : np.ndarray of shape (instances,) TODO Verify</span>
+<span class="sd">        idx_poison : np.ndarray of shape (instances,) TODO Verify</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span> <span class="o">=</span> <span class="n">X_modified</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span> <span class="o">=</span> <span class="n">Y_modified</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_test</span> <span class="o">=</span> <span class="n">X_test</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_test</span> <span class="o">=</span> <span class="n">Y_test</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx_train</span> <span class="o">=</span> <span class="n">idx_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx_poison</span> <span class="o">=</span> <span class="n">idx_poison</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_train</span> <span class="o">=</span> <span class="n">X_modified</span><span class="p">[</span><span class="n">idx_train</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span> <span class="o">=</span> <span class="n">Y_modified</span><span class="p">[</span><span class="n">idx_train</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X_poison</span> <span class="o">=</span> <span class="n">X_modified</span><span class="p">[</span><span class="n">idx_poison</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">=</span> <span class="n">Y_modified</span><span class="p">[</span><span class="n">idx_poison</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_map</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_class_map</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emp_centroids</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_centroids</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">true_centroids</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_centroids</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_train</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">emp_centroid_vec</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_centroid_vec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emp_centroids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">true_centroid_vec</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_centroid_vec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">true_centroids</span><span class="p">)</span>
+
+        <span class="c1"># Fraction of bad data / good data (so in total, there&#39;s 1+epsilon * good data )</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_poison</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="DataDef.plot_dists"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.plot_dists">[docs]</a>    <span class="k">def</span> <span class="nf">plot_dists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dists</span><span class="p">,</span> <span class="n">num_bins</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Plot Histogram of Distances</span>
+
+<span class="sd">        Visualise the approximate distribution of distances</span>
+<span class="sd">        by plotting a histogram of distance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dists : np.ndarray of shape (instances,)</span>
+<span class="sd">            Distances from each point to class centroid</span>
+<span class="sd">        num_bins : int</span>
+<span class="sd">            Number of bins in the histogram</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dists_train</span> <span class="o">=</span> <span class="n">dists</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx_train</span><span class="p">]</span>
+        <span class="n">dists_poison</span> <span class="o">=</span> <span class="n">dists</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx_poison</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span><span class="p">):</span> 
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No poisoned examples were from class </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="n">y</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dists_train</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">dists_poison</span><span class="p">)))</span> <span class="o">*</span> <span class="mf">0.9</span>
+                <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">dists_train</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">dists_poison</span><span class="p">)))</span> <span class="o">*</span> <span class="mf">1.1</span>
+                    
+                <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">)</span> <span class="o">/</span> <span class="n">num_bins</span>
+                <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;y = </span><span class="si">%s</span><span class="s1"> (# clean points = </span><span class="si">%s</span><span class="s1">, # poisoned points = </span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span> <span class="o">==</span> <span class="n">y</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">)))</span>
+                <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">dists_train</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span> <span class="o">==</span> <span class="n">y</span><span class="p">],</span> <span class="n">kde</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># Hack to make this a &quot;distribution&quot;</span>
+                    <span class="n">temp_dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">dists_poison</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">],</span> <span class="n">dists_poison</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">]))</span>
+                    <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">temp_dists</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="n">rug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sns</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">dists_poison</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">Y_poison</span> <span class="o">==</span> <span class="n">y</span><span class="p">],</span> <span class="n">kde</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataDef.compute_dists_under_Q_over_dataset"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.compute_dists_under_Q_over_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">compute_dists_under_Q_over_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">subtract_from_l2</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                           <span class="n">use_emp_centroids</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Compute Distances under Q Over Dataset</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Q : ???</span>
+<span class="sd">        subtract_from_l2 : bool</span>
+<span class="sd">            If this is true, plots ||x - mu|| - ||Q(x - mu)||</span>
+<span class="sd">        use_emp_centroids : bool</span>
+<span class="sd">            Use empirical centroids from data?</span>
+<span class="sd">        norm : int</span>
+<span class="sd">            Order of the norm</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dists : np.ndarray of shape (instances,) TODO Verify</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">use_emp_centroids</span><span class="p">:</span>
+            <span class="n">centroids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">emp_centroids</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">centroids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">true_centroids</span>
+        
+        <span class="n">dists</span> <span class="o">=</span> <span class="n">compute_dists_under_Q</span><span class="p">(</span>    
+            <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span><span class="p">,</span>
+            <span class="n">Q</span><span class="p">,</span>
+            <span class="n">subtract_from_l2</span><span class="o">=</span><span class="n">subtract_from_l2</span><span class="p">,</span>
+            <span class="n">centroids</span><span class="o">=</span><span class="n">centroids</span><span class="p">,</span>
+            <span class="n">class_map</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">class_map</span><span class="p">,</span>    
+            <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span>        
+
+        <span class="k">return</span> <span class="n">dists</span></div>
+
+<div class="viewcode-block" id="DataDef.get_sqrt_inv_covs"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.get_sqrt_inv_covs">[docs]</a>    <span class="k">def</span> <span class="nf">get_sqrt_inv_covs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_emp</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate Square Inverse Covariance</span>
+
+<span class="sd">        See: :func:&#39;~data_utils.get_sqrt_inv_cov&#39;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        use_emp : bool</span>
+<span class="sd">            Use empirical covariance</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        sqrt_inv_covs : np.ndarray of shape (classes, instances, dimensions)</span>
+<span class="sd">            Square root of the inverse covariance matrix for each class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">use_emp</span><span class="p">:</span>
+            <span class="n">sqrt_inv_covs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_sqrt_inv_cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_map</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sqrt_inv_covs</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_sqrt_inv_cov</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_train</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_map</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sqrt_inv_covs</span></div>
+
+<div class="viewcode-block" id="DataDef.get_knn_dists"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.get_knn_dists">[docs]</a>    <span class="k">def</span> <span class="nf">get_knn_dists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_neighbors</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; KNN Distances</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        num_neighbors : int</span>
+<span class="sd">            Number of neighbors</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dists : np.ndarray of shape (num_neighbors,) TODO This is actually the sum of the distnace to each neighbor</span>
+<span class="sd">            Distance to each neighbor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nbrs</span> <span class="o">=</span> <span class="n">neighbors</span><span class="o">.</span><span class="n">NearestNeighbors</span><span class="p">(</span>
+            <span class="n">n_neighbors</span><span class="o">=</span><span class="n">num_neighbors</span><span class="p">,</span> 
+            <span class="n">metric</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">)</span>
+        <span class="n">dists_to_each_neighbor</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">nbrs</span><span class="o">.</span><span class="n">kneighbors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dists_to_each_neighbor</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataDef.project_to_low_rank"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.project_to_low_rank">[docs]</a>    <span class="k">def</span> <span class="nf">project_to_low_rank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">use_emp</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">get_projected_data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Project to Low Rank</span>
+
+<span class="sd">        Projects to the rank (k+2) subspace defined by the top k SVs, mu_pos, and mu_neg.</span>
+
+<span class="sd">        If k is None, it tries to find a good k by taking the top 1000 SVs and seeing if we can</span>
+<span class="sd">        find some k such that sigma_k / sigma_1 &lt; 0.1. If we can, we take the smallest such k.</span>
+<span class="sd">        If not, we take k = 1000.</span>
+
+<span class="sd">        TODO Might be able to speed up; is svds actually performant on dense matrices?</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        k : int</span>
+<span class="sd">        use_emp : bool</span>
+<span class="sd">        get_projected_data : bool</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        P : ???</span>
+<span class="sd">        achieved_sv_ratio : ??</span>
+<span class="sd">        PX_modified : ?? (optional)</span>
+<span class="sd">        PX_train : ?? (optional)</span>
+<span class="sd">        PX_poison : ?? (optional)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">use_emp</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_train</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_train</span>
+        
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="k">assert</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svds</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;LM&#39;</span><span class="p">)</span> 
+        
+        <span class="c1"># If k is not specified, try to automatically find a good value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">search_k</span> <span class="o">=</span> <span class="mi">1000</span>
+            <span class="n">target_sv_ratio</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+            <span class="n">U</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svds</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">search_k</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;LM&#39;</span><span class="p">)</span> 
+            <span class="c1"># Make sure it&#39;s sorted in the order we think it is...</span>
+            <span class="n">max_sv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">S</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">max_sv</span>
+            <span class="n">sv_ratios</span> <span class="o">=</span> <span class="n">S</span> <span class="o">/</span> <span class="n">S</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> 
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sv_ratios</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">target_sv_ratio</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">sv_ratios</span> <span class="o">&gt;</span> <span class="n">target_sv_ratio</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Giving up -- min ratio was </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">sv_ratios</span><span class="p">))</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="mi">1</span>                
+            <span class="n">V</span> <span class="o">=</span> <span class="n">V</span><span class="p">[</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span>
+
+        <span class="n">mu_pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">mu_neg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            
+        <span class="n">V_mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">V</span><span class="p">,</span> <span class="n">mu_pos</span><span class="p">,</span> <span class="n">mu_neg</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">slin</span><span class="o">.</span><span class="n">orth</span><span class="p">(</span><span class="n">V_mu</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        
+        <span class="n">achieved_sv_ratio</span> <span class="o">=</span> <span class="n">S</span><span class="p">[</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">S</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">get_projected_data</span><span class="p">:</span>
+            <span class="n">PX_modified</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">PX_train</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_train</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">PX_poison</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X_poison</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">P</span><span class="p">,</span> <span class="n">achieved_sv_ratio</span><span class="p">,</span> <span class="n">PX_modified</span><span class="p">,</span> <span class="n">PX_train</span><span class="p">,</span> <span class="n">PX_poison</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">P</span><span class="p">,</span> <span class="n">achieved_sv_ratio</span></div>
+
+<div class="viewcode-block" id="DataDef.find_num_points_kept"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.find_num_points_kept">[docs]</a>    <span class="k">def</span> <span class="nf">find_num_points_kept</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx_to_keep</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Find Number of Points Kept</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        idx_to_keep : np.ndarray of shape (instances,) and dtype=bool</span>
+<span class="sd">            Indices of kept (not filtered) data</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        frac_of_good_points_kept : float</span>
+<span class="sd">            Fraction of clean points kept</span>
+<span class="sd">        frac_of_bad_points_kept : float</span>
+<span class="sd">            Fraction of malicious points kept</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">good_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">good_mask</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx_train</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">bad_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">bad_mask</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx_poison</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">keep_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">keep_mask</span><span class="p">[</span><span class="n">idx_to_keep</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    
+        <span class="n">frac_of_good_points_kept</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">keep_mask</span> <span class="o">&amp;</span> <span class="n">good_mask</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">good_mask</span><span class="p">)</span>
+        <span class="n">frac_of_bad_points_kept</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">keep_mask</span> <span class="o">&amp;</span> <span class="n">bad_mask</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">bad_mask</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">frac_of_good_points_kept</span><span class="p">,</span> <span class="n">frac_of_bad_points_kept</span></div>
+
+<div class="viewcode-block" id="DataDef.remove_and_retrain"><a class="viewcode-back" href="../../api.html#certpoison.defenses.DataDef.remove_and_retrain">[docs]</a>    <span class="k">def</span> <span class="nf">remove_and_retrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dists</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">frac_to_remove</span><span class="p">,</span> <span class="n">num_folds</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Remove and Retrain</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dists : np.ndarray of shape (instances,)</span>
+<span class="sd">            Distances from points to class centroids</span>
+<span class="sd">        model : sklearn.base.BaseEstimator</span>
+<span class="sd">            Scikit-learn compatible model</span>
+<span class="sd">        frac_to_remove : float</span>
+<span class="sd">            Fraction of data to remove</span>
+<span class="sd">        num_folds : int</span>
+<span class="sd">            Number of cross-validation folds</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        train_acc : float</span>
+<span class="sd">            Training accuracy</span>
+<span class="sd">        mean_cv_score : float</span>
+<span class="sd">            Average cross-validation score (calculated from the score method of the model)</span>
+<span class="sd">        test_acc : float</span>
+<span class="sd">            Testing accuracy</span>
+<span class="sd">        frac_of_good_points_kept : float</span>
+<span class="sd">            Fraction of clean points kept</span>
+<span class="sd">        frac_of_bad_points_kept : float</span>
+<span class="sd">            Fraction of malicious points kept</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">X_def</span><span class="p">,</span> <span class="n">Y_def</span><span class="p">,</span> <span class="n">idx_to_keep</span> <span class="o">=</span> <span class="n">remove_quantile</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">X_modified</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">Y_modified</span><span class="p">,</span> 
+            <span class="n">dists</span><span class="o">=</span><span class="n">dists</span><span class="p">,</span> 
+            <span class="n">frac_to_remove</span><span class="o">=</span><span class="n">frac_to_remove</span><span class="p">)</span>
+
+        <span class="n">frac_of_good_points_kept</span><span class="p">,</span> <span class="n">frac_of_bad_points_kept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_num_points_kept</span><span class="p">(</span><span class="n">idx_to_keep</span><span class="p">)</span>
+
+        <span class="n">k_fold</span> <span class="o">=</span> <span class="n">model_selection</span><span class="o">.</span><span class="n">KFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="n">num_folds</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">cv_scores</span> <span class="o">=</span> <span class="n">model_selection</span><span class="o">.</span><span class="n">cross_val_score</span><span class="p">(</span>
+            <span class="n">model</span><span class="p">,</span> 
+            <span class="n">X_def</span><span class="p">,</span> <span class="n">Y_def</span><span class="p">,</span> 
+            <span class="n">cv</span><span class="o">=</span><span class="n">k_fold</span><span class="p">,</span> 
+            <span class="n">n_jobs</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">((</span><span class="n">num_folds</span><span class="p">,</span> <span class="mi">8</span><span class="p">)))</span>        
+        <span class="n">mean_cv_score</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cv_scores</span><span class="p">)</span>
+
+        <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_def</span><span class="p">,</span> <span class="n">Y_def</span><span class="p">)</span>
+        <span class="n">train_acc</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_def</span><span class="p">,</span> <span class="n">Y_def</span><span class="p">)</span>
+        <span class="n">test_acc</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_test</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">train_acc</span><span class="p">,</span> <span class="n">mean_cv_score</span><span class="p">,</span> <span class="n">test_acc</span><span class="p">,</span> <span class="n">frac_of_good_points_kept</span><span class="p">,</span> <span class="n">frac_of_bad_points_kept</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Website and modified code by: Christopher Frederickson. Based on work by: Jacob Steinhardt, Pang Wei Koh, and Percy Liang..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

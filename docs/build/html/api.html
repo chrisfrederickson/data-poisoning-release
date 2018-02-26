@@ -1,0 +1,1666 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>The certpoison API reference &#8212; Certified Defenses for Data Poisoning Attacks 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Certified Defenses for Data Poisoning Attacks’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-certpoison">
+<span id="the-certpoison-api-reference"></span><h1>The certpoison API reference<a class="headerlink" href="#module-certpoison" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-certpoison.upper_bounds">
+<span id="the-upper-bounds-module"></span><h2>The “upper_bounds” module<a class="headerlink" href="#module-certpoison.upper_bounds" title="Permalink to this headline">¶</a></h2>
+<p>Determine Upper Bounds</p>
+<dl class="class">
+<dt id="certpoison.upper_bounds.Minimizer">
+<em class="property">class </em><code class="descclassname">certpoison.upper_bounds.</code><code class="descname">Minimizer</code><span class="sig-paren">(</span><em>use_sphere=True</em>, <em>use_slab=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#Minimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.Minimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>CVX Minimizer / Data Maximizer</p>
+<p>This class determines the attack point the maximises the
+loss constrained by the feasible set. This is the first
+line of the loop in Algorithm 1.</p>
+<p>For the sphere defense this is the optimization problem:</p>
+<p>For the slab defense this is the optimization problem:</p>
+<dl class="docutils">
+<dt>where</dt>
+<dd>c :      class centroid
+c_vec :  vector between the two class centroids</dd>
+</dl>
+<dl class="method">
+<dt id="certpoison.upper_bounds.Minimizer.minimize_over_feasible_set">
+<code class="descname">minimize_over_feasible_set</code><span class="sig-paren">(</span><em>y</em>, <em>w</em>, <em>centroid</em>, <em>centroid_vec</em>, <em>sphere_radius</em>, <em>slab_radius</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#Minimizer.minimize_over_feasible_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.Minimizer.minimize_over_feasible_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Minimize over Feasible Set</p>
+<p>Includes both sphere and slab.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>y</strong> : int</p>
+<blockquote>
+<div><p>Input label</p>
+</div></blockquote>
+<p><strong>w</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Coefficient</p>
+</div></blockquote>
+<p><strong>centroid</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroid for each class</p>
+</div></blockquote>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Vector between the two centroids</p>
+</div></blockquote>
+<p><strong>sphere_radius</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Sphere radius for each class</p>
+</div></blockquote>
+<p><strong>slab_radius</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Slab radius for each class</p>
+</div></blockquote>
+<p><strong>verbose</strong> : bool</p>
+<blockquote>
+<div><p>CVX verbose</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : np.ndarray</p>
+<blockquote class="last">
+<div><p>Optimal x;</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="certpoison.upper_bounds.NearestPointFinder">
+<em class="property">class </em><code class="descclassname">certpoison.upper_bounds.</code><code class="descname">NearestPointFinder</code><span class="sig-paren">(</span><em>d</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#NearestPointFinder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.NearestPointFinder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Nearest Point Finder</p>
+<p>We can speed this up by expressing the constraints in one dimension,
+but let’s see how it goes first.</p>
+<p>Solve the optimization problem:</p>
+<dl class="method">
+<dt id="certpoison.upper_bounds.NearestPointFinder.find_nearest_point">
+<code class="descname">find_nearest_point</code><span class="sig-paren">(</span><em>y</em>, <em>g</em>, <em>theta</em>, <em>centroid</em>, <em>centroid_vec</em>, <em>sphere_radius</em>, <em>slab_radius</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#NearestPointFinder.find_nearest_point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.NearestPointFinder.find_nearest_point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find Nearest Point</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>y</strong> : int</p>
+<p><strong>g</strong> : ??</p>
+<p><strong>theta :</strong></p>
+<p><strong>centroid</strong> : np.ndarray of shape (classes, dimensions)</p>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (dimensions,)</p>
+<p><strong>sphere_radius</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>slab_radius</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>verbose</strong> : bool</p>
+<blockquote>
+<div><p>CVX verbose</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">c_opt :</p>
+<blockquote class="last">
+<div><p>Optimal C value</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="certpoison.upper_bounds.Projector">
+<em class="property">class </em><code class="descclassname">certpoison.upper_bounds.</code><code class="descname">Projector</code><span class="sig-paren">(</span><em>use_sphere=True</em>, <em>use_slab=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#Projector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.Projector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Projector ???</p>
+<p>Solves the optimization problem:
+TODO</p>
+<dl class="method">
+<dt id="certpoison.upper_bounds.Projector.project_onto_feasible_set">
+<code class="descname">project_onto_feasible_set</code><span class="sig-paren">(</span><em>z</em>, <em>centroid</em>, <em>centroid_vec</em>, <em>sphere_radius</em>, <em>slab_radius</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#Projector.project_onto_feasible_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.Projector.project_onto_feasible_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project onto Feasible Set</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>z</strong> : ??</p>
+<p><strong>centroid</strong> : np.ndarray of shape (classes, dimension)</p>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (dimensions,)</p>
+<p><strong>sphere_radius</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>slab_radius</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>verbose</strong> : bool</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">x_proj :</p>
+<blockquote class="last">
+<div><p>Data projected onto feasible set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.cvx_dot">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">cvx_dot</code><span class="sig-paren">(</span><em>a</em>, <em>b</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#cvx_dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.cvx_dot" title="Permalink to this definition">¶</a></dt>
+<dd><p>CVX Dot Product</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>a</strong> : ???</p>
+<p><strong>b</strong> : ???</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>dot</strong> : ???</p>
+<blockquote class="last">
+<div><p>Dot product of a and b</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.evaluate_attack">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">evaluate_attack</code><span class="sig-paren">(</span><em>X_modified</em>, <em>Y_modified</em>, <em>X_test</em>, <em>Y_test</em>, <em>idx_train</em>, <em>idx_poison</em>, <em>epsilon</em>, <em>weight_decay</em>, <em>upper_params_norm_sq</em>, <em>use_bias</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#evaluate_attack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.evaluate_attack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate Attack</p>
+<p>Trains an SVM on the clean+poisoned data (by calling svm_with_rho_squared)
+and then reports statistics on clean vs poisoned loss, etc.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X_modified</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Poisoned features</p>
+</div></blockquote>
+<p><strong>Y_modified</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Poisoned labels</p>
+</div></blockquote>
+<p><strong>X_test</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Testing features</p>
+</div></blockquote>
+<p><strong>Y_test</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Testing labels</p>
+</div></blockquote>
+<p><strong>idx_train</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>??</p>
+</div></blockquote>
+<p><strong>idx_poison</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Indices of malicious samples in the poisoned dataset</p>
+</div></blockquote>
+<p><strong>epsilon</strong> : float</p>
+<blockquote>
+<div><p>Fraction of data to keep</p>
+</div></blockquote>
+<p><strong>weight_decay</strong> : float</p>
+<blockquote>
+<div><p>Used to set SVM free parameters # TODO Clarify</p>
+</div></blockquote>
+<p><strong>upper_params_norm_sq</strong> : float</p>
+<blockquote>
+<div><p>Used to set SVM free parameters TODO Clarify</p>
+</div></blockquote>
+<p><strong>use_bias</strong> : bool</p>
+<blockquote>
+<div><p>Use bias in the SVM model</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>total_train_loss</strong> : float</p>
+<blockquote>
+<div><p>Training loss on the poisoned dataset due to both clean and malicious data.</p>
+</div></blockquote>
+<p><strong>avg_good_train_loss</strong> : float</p>
+<blockquote>
+<div><p>Training loss on only clean data.</p>
+</div></blockquote>
+<p><strong>avg_bad_train_loss</strong> : float</p>
+<blockquote>
+<div><p>Training loss on only malicious data.</p>
+</div></blockquote>
+<p><strong>test_loss</strong> : float</p>
+<blockquote>
+<div><p>Testing loss.</p>
+</div></blockquote>
+<p><strong>overall_train_acc</strong> : float</p>
+<blockquote>
+<div><p>Training data accuracy on poisoned dataset due to both clean and malicious data.</p>
+</div></blockquote>
+<p><strong>good_train_acc</strong> : float</p>
+<blockquote>
+<div><p>Training data accuracy on only clean data.</p>
+</div></blockquote>
+<p><strong>bad_train_acc</strong> : float</p>
+<blockquote>
+<div><p>Training data accuracy on only malicious data.</p>
+</div></blockquote>
+<p><strong>test_acc</strong> : float</p>
+<blockquote>
+<div><p>Testing data accuracy</p>
+</div></blockquote>
+<p><strong>params_norm_sq</strong> : float</p>
+<blockquote>
+<div><p>Usef to determine SVM C # TODO Clarify</p>
+</div></blockquote>
+<p><strong>weight_decay</strong> : float</p>
+<blockquote class="last">
+<div><p>Used to determine SVM C # TODO Clarify</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.generate_upper_and_lower_bounds">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">generate_upper_and_lower_bounds</code><span class="sig-paren">(</span><em>X_train</em>, <em>Y_train</em>, <em>norm_sq_constraint</em>, <em>epsilon</em>, <em>max_iter</em>, <em>num_iter_to_throw_out</em>, <em>learning_rate</em>, <em>init_w</em>, <em>init_b</em>, <em>class_map</em>, <em>centroids</em>, <em>centroid_vec</em>, <em>sphere_radii</em>, <em>slab_radii</em>, <em>minimizer</em>, <em>verbose=True</em>, <em>print_interval=500</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#generate_upper_and_lower_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.generate_upper_and_lower_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate Upper and Lower Bounds</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X_train</strong> : :obj:’np.ndarray’ of shape (instances, dimensions)</p>
+<p><strong>Y_train</strong> : np.ndarray of shape (instances,)</p>
+<p><strong>norm_sq_constraint</strong> : float</p>
+<p><strong>epsilon</strong> : float</p>
+<p><strong>max_iter</strong> : int</p>
+<p><strong>num_iter_to_throw_out</strong> : int</p>
+<p><strong>learning_rate</strong> : float</p>
+<p><strong>init_w</strong> : np.ndarray of shape (dimensions)</p>
+<p><strong>init_b</strong> : float</p>
+<p><strong>class_map</strong> : dict</p>
+<p><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (1, dimensions)</p>
+<p><strong>sphere_radii</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>slab_radii</strong> : np.ndarray of shape (classes,)</p>
+<p><strong>minimizer</strong> : Minimizer</p>
+<p><strong>verbose</strong> : bool</p>
+<p><strong>print_interval</strong> : int</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_modified</strong> : np.ndarray of shape (instances, dimensions)</p>
+<p><strong>Y_modified</strong> : np.ndarray of shape (instances,)</p>
+<p><strong>idx_train</strong> : np.ndarray of shape (instances,)</p>
+<p><strong>idx_poison</strong> : np.ndarray of shape (instances,)</p>
+<p><strong>best_upper_bound</strong> : float</p>
+<p><strong>best_upper_good_loss</strong> : float</p>
+<p><strong>best_upper_bad_loss</strong> : float</p>
+<p><strong>best_upper_good_acc</strong> : float</p>
+<p><strong>best_upper_bad_acc</strong> : float</p>
+<p class="last">best_upper_params_norm_sq :float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.get_projection_matrix">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">get_projection_matrix</code><span class="sig-paren">(</span><em>w</em>, <em>centroid</em>, <em>centroid_vec</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#get_projection_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.get_projection_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Projection Matrix</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>w</strong> : np.ndarray of shape (dimensions,)</p>
+<p><strong>centroid</strong> : np.ndarray of shape (classes, dimensions)</p>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (dimensions,)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>P</strong> : np.ndarray of shape (3, dimensions)</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>Projection matrix that projects a vector onto the subspace spanned by</dt>
+<dd><p class="first last">w, centroid, and centroid_vec</p>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.hinge_grad">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">hinge_grad</code><span class="sig-paren">(</span><em>w</em>, <em>b</em>, <em>X</em>, <em>Y</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#hinge_grad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.hinge_grad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gradient of Hinge Loss</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>w</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Coefficients</p>
+</div></blockquote>
+<p><strong>b</strong> : float</p>
+<blockquote>
+<div><p>Intercept</p>
+</div></blockquote>
+<p><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input Features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input Labels</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>grad_w</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Gradient of coefficients</p>
+</div></blockquote>
+<p><strong>grad_b</strong> : float</p>
+<blockquote class="last">
+<div><p>Gradient of intercept</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.hinge_loss">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">hinge_loss</code><span class="sig-paren">(</span><em>w</em>, <em>b</em>, <em>X</em>, <em>Y</em>, <em>sample_weights=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#hinge_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.hinge_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate Hinge Loss</p>
+<p>Calculates the hinge loss.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>w</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Coefficients</p>
+</div></blockquote>
+<p><strong>b</strong> : float</p>
+<blockquote>
+<div><p>Intercept</p>
+</div></blockquote>
+<p><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input Features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input Labels</p>
+</div></blockquote>
+<p><strong>sample_weights</strong> : None or np.ndarray of shape (???)</p>
+<blockquote>
+<div><p>???</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>loss</strong> : float</p>
+<blockquote class="last">
+<div><p>Hinge loss</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.sample_lower_bound_attack">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">sample_lower_bound_attack</code><span class="sig-paren">(</span><em>X_train</em>, <em>Y_train</em>, <em>x_bs</em>, <em>y_bs</em>, <em>epsilon</em>, <em>num_iter_to_throw_out</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#sample_lower_bound_attack"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.sample_lower_bound_attack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Poisoned Dataset from Pool of Malicious Data</p>
+<p>Note that the clean and poisoned data order is not randomized.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X_train</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Clean input features</p>
+</div></blockquote>
+<p><strong>Y_train</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Clean input labels</p>
+</div></blockquote>
+<p><strong>x_bs</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Pool of malicious input features</p>
+</div></blockquote>
+<p><strong>y_bs</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Pool of malicious input labels</p>
+</div></blockquote>
+<p><strong>epsilon</strong> : float</p>
+<blockquote>
+<div><p>Desired fraction of malicious data to add</p>
+</div></blockquote>
+<p><strong>num_iter_to_throw_out</strong> : int</p>
+<blockquote>
+<div><p>???</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_modified</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Poisoned features</p>
+</div></blockquote>
+<p><strong>Y_modified</strong> : no.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Poisoned labels</p>
+</div></blockquote>
+<p><strong>idx_train</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Indices of clean and poisoned data</p>
+</div></blockquote>
+<p><strong>idx_poison</strong> : np.ndarray of shape (instances,)</p>
+<blockquote class="last">
+<div><p>Indices of clean and poisoned data</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.upper_bounds.svm_with_rho_squared">
+<code class="descclassname">certpoison.upper_bounds.</code><code class="descname">svm_with_rho_squared</code><span class="sig-paren">(</span><em>X_train</em>, <em>Y_train</em>, <em>X_test</em>, <em>Y_test</em>, <em>upper_params_norm_sq</em>, <em>use_bias</em>, <em>weight_decay=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/upper_bounds.html#svm_with_rho_squared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.upper_bounds.svm_with_rho_squared" title="Permalink to this definition">¶</a></dt>
+<dd><p>Train Support Vector Machine</p>
+<p>Trains an SVM that has params with squared norm roughly equals (and no larger) than
+upper_params_norm_sq. It works by doing binary search on the weight_decay.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X_train</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input training features</p>
+</div></blockquote>
+<p><strong>Y_train</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input training labels</p>
+</div></blockquote>
+<p><strong>X_test</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input testing features</p>
+</div></blockquote>
+<p><strong>Y_test</strong> : np.ndarray of shape (instances)</p>
+<blockquote>
+<div><p>Input testing labels</p>
+</div></blockquote>
+<p><strong>upper_params_norm_sq</strong> : ???</p>
+<p><strong>use_bias</strong> : ???</p>
+<p><strong>weight_decay</strong> : float</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>train_loss</strong> : float</p>
+<blockquote>
+<div><p>Training loss</p>
+</div></blockquote>
+<p><strong>train_acc</strong> : float</p>
+<blockquote>
+<div><p>Training accuracy</p>
+</div></blockquote>
+<p><strong>test_loss</strong> : float</p>
+<blockquote>
+<div><p>Testing loss</p>
+</div></blockquote>
+<p><strong>test_acc</strong> : float</p>
+<blockquote>
+<div><p>Testing accuracu</p>
+</div></blockquote>
+<p><strong>params_norm_sq</strong> : ???</p>
+<p><strong>weight_decay</strong> : ???</p>
+<p><strong>params</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Fit coefficients</p>
+</div></blockquote>
+<p><strong>bias</strong> : float</p>
+<blockquote>
+<div><p>Fit intercept</p>
+</div></blockquote>
+<p><strong>svm_model</strong> : ???</p>
+<blockquote class="last">
+<div><p>Trained Support Vector Machine model</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-certpoison.defenses">
+<span id="the-defenses-module"></span><h2>The “defenses” module<a class="headerlink" href="#module-certpoison.defenses" title="Permalink to this headline">¶</a></h2>
+<p>Defenses</p>
+<dl class="class">
+<dt id="certpoison.defenses.DataDef">
+<em class="property">class </em><code class="descclassname">certpoison.defenses.</code><code class="descname">DataDef</code><span class="sig-paren">(</span><em>X_modified</em>, <em>Y_modified</em>, <em>X_test</em>, <em>Y_test</em>, <em>idx_train</em>, <em>idx_poison</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data Defense</p>
+<p>Defenses that filter data outside of a feasible set.</p>
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.compute_dists_under_Q_over_dataset">
+<code class="descname">compute_dists_under_Q_over_dataset</code><span class="sig-paren">(</span><em>Q</em>, <em>subtract_from_l2=False</em>, <em>use_emp_centroids=False</em>, <em>norm=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.compute_dists_under_Q_over_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.compute_dists_under_Q_over_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute Distances under Q Over Dataset</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Q</strong> : ???</p>
+<p><strong>subtract_from_l2</strong> : bool</p>
+<blockquote>
+<div><p>If this is true, plots ||x - mu|| - ||Q(x - mu)||</p>
+</div></blockquote>
+<p><strong>use_emp_centroids</strong> : bool</p>
+<blockquote>
+<div><p>Use empirical centroids from data?</p>
+</div></blockquote>
+<p><strong>norm</strong> : int</p>
+<blockquote>
+<div><p>Order of the norm</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>dists</strong> : np.ndarray of shape (instances,) TODO Verify</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.find_num_points_kept">
+<code class="descname">find_num_points_kept</code><span class="sig-paren">(</span><em>idx_to_keep</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.find_num_points_kept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.find_num_points_kept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find Number of Points Kept</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>idx_to_keep</strong> : np.ndarray of shape (instances,) and dtype=bool</p>
+<blockquote>
+<div><p>Indices of kept (not filtered) data</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>frac_of_good_points_kept</strong> : float</p>
+<blockquote>
+<div><p>Fraction of clean points kept</p>
+</div></blockquote>
+<p><strong>frac_of_bad_points_kept</strong> : float</p>
+<blockquote class="last">
+<div><p>Fraction of malicious points kept</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.get_knn_dists">
+<code class="descname">get_knn_dists</code><span class="sig-paren">(</span><em>num_neighbors</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.get_knn_dists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.get_knn_dists" title="Permalink to this definition">¶</a></dt>
+<dd><p>KNN Distances</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_neighbors</strong> : int</p>
+<blockquote>
+<div><p>Number of neighbors</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>dists</strong> : np.ndarray of shape (num_neighbors,) TODO This is actually the sum of the distnace to each neighbor</p>
+<blockquote class="last">
+<div><p>Distance to each neighbor</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.get_sqrt_inv_covs">
+<code class="descname">get_sqrt_inv_covs</code><span class="sig-paren">(</span><em>use_emp=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.get_sqrt_inv_covs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.get_sqrt_inv_covs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate Square Inverse Covariance</p>
+<p>See: :func:’~data_utils.get_sqrt_inv_cov’</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>use_emp</strong> : bool</p>
+<blockquote>
+<div><p>Use empirical covariance</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>sqrt_inv_covs</strong> : np.ndarray of shape (classes, instances, dimensions)</p>
+<blockquote class="last">
+<div><p>Square root of the inverse covariance matrix for each class</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.plot_dists">
+<code class="descname">plot_dists</code><span class="sig-paren">(</span><em>dists</em>, <em>num_bins=100</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.plot_dists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.plot_dists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Histogram of Distances</p>
+<p>Visualise the approximate distribution of distances
+by plotting a histogram of distance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dists</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Distances from each point to class centroid</p>
+</div></blockquote>
+<p><strong>num_bins</strong> : int</p>
+<blockquote class="last">
+<div><p>Number of bins in the histogram</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.project_to_low_rank">
+<code class="descname">project_to_low_rank</code><span class="sig-paren">(</span><em>k</em>, <em>use_emp=False</em>, <em>get_projected_data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.project_to_low_rank"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.project_to_low_rank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project to Low Rank</p>
+<p>Projects to the rank (k+2) subspace defined by the top k SVs, mu_pos, and mu_neg.</p>
+<p>If k is None, it tries to find a good k by taking the top 1000 SVs and seeing if we can
+find some k such that sigma_k / sigma_1 &lt; 0.1. If we can, we take the smallest such k.
+If not, we take k = 1000.</p>
+<p>TODO Might be able to speed up; is svds actually performant on dense matrices?</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>k</strong> : int</p>
+<p><strong>use_emp</strong> : bool</p>
+<p><strong>get_projected_data</strong> : bool</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>P</strong> : ???</p>
+<p><strong>achieved_sv_ratio</strong> : ??</p>
+<p><strong>PX_modified</strong> : ?? (optional)</p>
+<p><strong>PX_train</strong> : ?? (optional)</p>
+<p class="last"><strong>PX_poison</strong> : ?? (optional)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.defenses.DataDef.remove_and_retrain">
+<code class="descname">remove_and_retrain</code><span class="sig-paren">(</span><em>dists</em>, <em>model</em>, <em>frac_to_remove</em>, <em>num_folds=5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#DataDef.remove_and_retrain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.DataDef.remove_and_retrain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove and Retrain</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dists</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Distances from points to class centroids</p>
+</div></blockquote>
+<p><strong>model</strong> : sklearn.base.BaseEstimator</p>
+<blockquote>
+<div><p>Scikit-learn compatible model</p>
+</div></blockquote>
+<p><strong>frac_to_remove</strong> : float</p>
+<blockquote>
+<div><p>Fraction of data to remove</p>
+</div></blockquote>
+<p><strong>num_folds</strong> : int</p>
+<blockquote>
+<div><p>Number of cross-validation folds</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>train_acc</strong> : float</p>
+<blockquote>
+<div><p>Training accuracy</p>
+</div></blockquote>
+<p><strong>mean_cv_score</strong> : float</p>
+<blockquote>
+<div><p>Average cross-validation score (calculated from the score method of the model)</p>
+</div></blockquote>
+<p><strong>test_acc</strong> : float</p>
+<blockquote>
+<div><p>Testing accuracy</p>
+</div></blockquote>
+<p><strong>frac_of_good_points_kept</strong> : float</p>
+<blockquote>
+<div><p>Fraction of clean points kept</p>
+</div></blockquote>
+<p><strong>frac_of_bad_points_kept</strong> : float</p>
+<blockquote class="last">
+<div><p>Fraction of malicious points kept</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.defenses.compute_dists_under_Q">
+<code class="descclassname">certpoison.defenses.</code><code class="descname">compute_dists_under_Q</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>Q</em>, <em>subtract_from_l2=False</em>, <em>centroids=None</em>, <em>class_map=None</em>, <em>norm=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#compute_dists_under_Q"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.compute_dists_under_Q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute Distances Under Q</p>
+<p>Computes ||Q(x - mu)|| in the corresponding norm.
+Returns a vector of length num_examples (X.shape[0]).
+If Q has dimension 3, then each class gets its own Q.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>Q</strong> : ??? TODO</p>
+<blockquote>
+<div><p>??? TODO</p>
+</div></blockquote>
+<p><strong>subtract_from_l2</strong> : bool</p>
+<blockquote>
+<div><p>If this is true, computes ||x - mu|| - ||Q(x - mu)||</p>
+</div></blockquote>
+<p><strong>centroids</strong> : None or np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroid for each class. If None, it will be calculated from the data.</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+<p><strong>norm</strong> : int</p>
+<blockquote>
+<div><p>Order of norm</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Q_dists</strong> : ??? TODO</p>
+<blockquote class="last">
+<div><p>??? TODO</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.defenses.remove_quantile">
+<code class="descclassname">certpoison.defenses.</code><code class="descname">remove_quantile</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>dists</em>, <em>frac_to_remove</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/defenses.html#remove_quantile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.defenses.remove_quantile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove Quantile</p>
+<p>Removes points from the dataset with the highest distances according
+to the fraction to remove. This works separately for each class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>dists</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Distance from point to class centroid. (aka outlierness score)</p>
+</div></blockquote>
+<p><strong>frac_to_remove</strong> : float</p>
+<blockquote>
+<div><p>Fraction of points to remove</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_def</strong> : np.ndarray of shape (instnaces, dimensions)</p>
+<blockquote>
+<div><p>Defended features</p>
+</div></blockquote>
+<p><strong>Y_def</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Defended labels</p>
+</div></blockquote>
+<p><strong>idx_to_keep</strong> : list TODO Verify</p>
+<blockquote class="last">
+<div><p>Indices of the input data that is kept</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-certpoison.data_utils">
+<span id="the-data-utils-module"></span><h2>The “data_utils” module<a class="headerlink" href="#module-certpoison.data_utils" title="Permalink to this headline">¶</a></h2>
+<p>Data Utilities</p>
+<dl class="class">
+<dt id="certpoison.data_utils.NumpyEncoder">
+<em class="property">class </em><code class="descclassname">certpoison.data_utils.</code><code class="descname">NumpyEncoder</code><span class="sig-paren">(</span><em>*</em>, <em>skipkeys=False</em>, <em>ensure_ascii=True</em>, <em>check_circular=True</em>, <em>allow_nan=True</em>, <em>sort_keys=False</em>, <em>indent=None</em>, <em>separators=None</em>, <em>default=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#NumpyEncoder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.NumpyEncoder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Numpy Encoder</p>
+<p>Encode numpy object as JSON.</p>
+<dl class="method">
+<dt id="certpoison.data_utils.NumpyEncoder.default">
+<code class="descname">default</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#NumpyEncoder.default"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.NumpyEncoder.default" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override default encoder</p>
+<p>If the object is a 1D numpy array, encode it as JSON array.
+If the object is a numpy float, encode it as a JSON number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>obj</strong> : nd.array, np.floating, or other type</p>
+<blockquote>
+<div><p>Object to encode</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>json</strong> : str</p>
+<blockquote class="last">
+<div><p>Encoded JSON blob</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.add_points">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">add_points</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>X</em>, <em>Y</em>, <em>num_copies=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#add_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.add_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add points to the dataset</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Features of points to add</p>
+</div></blockquote>
+<p><strong>y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Labels of points to add</p>
+</div></blockquote>
+<p><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Dataset features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances)</p>
+<blockquote>
+<div><p>Dataset labels</p>
+</div></blockquote>
+<p><strong>num_copies</strong> : int</p>
+<blockquote>
+<div><p>Number of copies of the points to add</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_modified</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Modified dataset features</p>
+</div></blockquote>
+<p><strong>Y_modified</strong> : np.ndarray of shape (instances,)</p>
+<blockquote class="last">
+<div><p>Modified dataset labels</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.copy_random_points">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">copy_random_points</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>mask_to_choose_from=None</em>, <em>target_class=1</em>, <em>num_copies=1</em>, <em>random_seed=18</em>, <em>replace=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#copy_random_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.copy_random_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy Random Points from a Dataset</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>mask_to_choose_from</strong> : np.ndarray of shape (instances,) and dtype=bool</p>
+<blockquote>
+<div><p>Only copy from points where mask_to_choose_from == True</p>
+</div></blockquote>
+<p><strong>target_class</strong> : int</p>
+<blockquote>
+<div><p>Only copy from class target_class</p>
+</div></blockquote>
+<p><strong>num_copies: int</strong></p>
+<blockquote>
+<div><p>Number of points to copy</p>
+</div></blockquote>
+<p><strong>random_seed</strong> : int</p>
+<blockquote>
+<div><p>Numpy random seed</p>
+</div></blockquote>
+<p><strong>replace</strong> : bool</p>
+<blockquote>
+<div><p>Copy with replacement</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_modified</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Copied dataset features</p>
+</div></blockquote>
+<p><strong>Y_modified</strong> : np.ndarray of shape (instances,)</p>
+<blockquote class="last">
+<div><p>Copied dataset labels</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.filter_points_outside_feasible_set">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">filter_points_outside_feasible_set</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>centroids</em>, <em>centroid_vec</em>, <em>sphere_radii</em>, <em>slab_radii</em>, <em>class_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#filter_points_outside_feasible_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.filter_points_outside_feasible_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove Points Outside of Feasible Set</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroid for each class</p>
+</div></blockquote>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (1, dimensions)</p>
+<blockquote>
+<div><p>Vector between centroids</p>
+</div></blockquote>
+<p><strong>sphere_radii</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Radii to use with sphere projection</p>
+</div></blockquote>
+<p><strong>slab_radii</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Radii to use with slab projection</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_filtered</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Filtered input features</p>
+</div></blockquote>
+<p><strong>Y_filtered</strong> : np.ndarray of shape (instances,)</p>
+<blockquote class="last">
+<div><p>Filtered input labels</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_centroid_vec">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_centroid_vec</code><span class="sig-paren">(</span><em>centroids</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_centroid_vec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_centroid_vec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Centroids Vector</p>
+<p>Get the unit vector that starts from the centroid of
+class 1 and points toward the centroid of class -1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroids of each class</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>centroids_vec</strong> : np.ndarray of shape (1, dimensions)</p>
+<blockquote class="last">
+<div><p>Unit vector from centroid of class 1 to centroid of class -1</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_centroids">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_centroids</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>class_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_centroids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_centroids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Centroids for Each Class</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote class="last">
+<div><p>Centroids of each class</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_class_map">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_class_map</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_class_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_class_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Mapping Between Class Labels and Indices</p>
+<p>The labels are stores as either -1 or 0, but we sometimes need them as 0
+or 1 for indexing into matrices. This “class map” makes it easy to convert
+as you can run class_map(Y).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>class_map</strong> : dict</p>
+<blockquote class="last">
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_data_params">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_data_params</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>percentile</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_data_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_data_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper Function to Calculate Useful Properties About the Dataset</p>
+<p>Note: Can speed this up if necessary</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>percentile</strong> : float</p>
+<blockquote>
+<div><p>Percentage of data to keep when setting radii</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+<p><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroids of each class</p>
+</div></blockquote>
+<p><strong>centroid_vec</strong> : np.ndarray of shape (dimensions,)</p>
+<blockquote>
+<div><p>Unit vector from centroid of class 1 to centroid of class -1</p>
+</div></blockquote>
+<p><strong>sphere_radii</strong> : float</p>
+<blockquote>
+<div><p>Radius of sphere defense so the percentile criteria is met</p>
+</div></blockquote>
+<p><strong>slab_radii</strong> : float</p>
+<blockquote class="last">
+<div><p>Radius of slab defense so the percentile criteria is met</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_projection_fn">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_projection_fn</code><span class="sig-paren">(</span><em>X_clean</em>, <em>Y_clean</em>, <em>sphere=True</em>, <em>slab=True</em>, <em>percentile=70</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_projection_fn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_projection_fn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Projection Function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X_clean</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Clean input features</p>
+</div></blockquote>
+<p><strong>Y_clean</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Clean input labels</p>
+</div></blockquote>
+<p><strong>sphere</strong> : bool</p>
+<blockquote>
+<div><p>Use sphere projection?</p>
+</div></blockquote>
+<p><strong>slab</strong> : bool</p>
+<blockquote>
+<div><p>Use slab projection?</p>
+</div></blockquote>
+<p><strong>percentile</strong> : float</p>
+<blockquote>
+<div><p>Percentage of data to keep when setting radii</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>project_onto_feasible_set</strong> : function</p>
+<blockquote class="last">
+<div><p>Function to project data onto the feasible set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.get_sqrt_inv_cov">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">get_sqrt_inv_cov</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>class_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#get_sqrt_inv_cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.get_sqrt_inv_cov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Square Root of the Inverse Covariance Matrix for Each Class</p>
+<p>For each class, calculate the square root of the inverse covariance matrix
+of the features by singular value decomposition.</p>
+<p>Note: Can speed this up if necessary</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>sqrt_inv_covs</strong> : np.ndarray of shape (classes, instances, dimensions)</p>
+<blockquote class="last">
+<div><p>Square root of the inverse covariance matrix for each class</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.project_onto_slab">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">project_onto_slab</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>v</em>, <em>radii</em>, <em>centroids</em>, <em>class_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#project_onto_slab"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.project_onto_slab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project Dataset onto Slab</p>
+<p>For each class, project the data a slab given by the equation</p>
+<p>Note: If the data is already in the slab, it is unchanged.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>v</strong> : np.ndarray of shape (1, dimensions)</p>
+<blockquote>
+<div><p>Centroid vector (v^T x needs to be within radius of v^T centroid)</p>
+</div></blockquote>
+<p><strong>radii</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Slab radius for each class</p>
+</div></blockquote>
+<p><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroid of each class</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_proj</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote class="last">
+<div><p>Projected features onto slab</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.project_onto_sphere">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">project_onto_sphere</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>radii</em>, <em>centroids</em>, <em>class_map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#project_onto_sphere"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.project_onto_sphere" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project Dataset onto Sphere</p>
+<p>For each class, project the data onto a sphere with a
+particular radius centered at the class centroid.</p>
+<p>Note: If the data is already within the sphere, it is unchanged.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>Y</strong> : np.ndarray of shape (instances,)</p>
+<blockquote>
+<div><p>Input labels</p>
+</div></blockquote>
+<p><strong>radii</strong> : np.ndarray of shape (classes,)</p>
+<blockquote>
+<div><p>Sphere radius for each class</p>
+</div></blockquote>
+<p><strong>centroids</strong> : np.ndarray of shape (classes, dimensions)</p>
+<blockquote>
+<div><p>Centroid of each class</p>
+</div></blockquote>
+<p><strong>class_map</strong> : dict</p>
+<blockquote>
+<div><p>Class to index mapping</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_proj</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote class="last">
+<div><p>Projected features onto sphere</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.rround">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">rround</code><span class="sig-paren">(</span><em>X</em>, <em>random_seed=3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#rround"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.rround" title="Permalink to this definition">¶</a></dt>
+<dd><p>Random Round</p>
+<p>Randomly round number according to the fractional component.
+E.g. The number 5.25 has a probability of 0.75 of being rounded
+to 5 and a probability of 0.25 of being rounded to 6.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+<p><strong>random_seed</strong> : int</p>
+<blockquote>
+<div><p>Numpy random seed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>X_rround</strong> : np.ndarray of shape (instances, dimensions)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.data_utils.threshold">
+<code class="descclassname">certpoison.data_utils.</code><code class="descname">threshold</code><span class="sig-paren">(</span><em>X</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/data_utils.html#threshold"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.data_utils.threshold" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set all Negative Values in X to 0</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote>
+<div><p>Input features</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>X_clip</strong> : np.ndarray of shape (instances, dimensions)</p>
+<blockquote class="last">
+<div><p>Clipped input features</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-certpoison.datasets">
+<span id="the-datasets-module"></span><h2>The “datasets” module<a class="headerlink" href="#module-certpoison.datasets" title="Permalink to this headline">¶</a></h2>
+<p>Dataset Utilities</p>
+</div>
+<div class="section" id="module-certpoison.plotter">
+<span id="the-plotter-module"></span><h2>The “plotter” module<a class="headerlink" href="#module-certpoison.plotter" title="Permalink to this headline">¶</a></h2>
+<p>Create Basic Plot</p>
+<dl class="class">
+<dt id="certpoison.plotter.Plotter">
+<em class="property">class </em><code class="descclassname">certpoison.plotter.</code><code class="descname">Plotter</code><span class="sig-paren">(</span><em>X</em>, <em>axes=None</em>, <em>figsize=None</em>, <em>padding=1</em>, <em>axis_equal=False</em>, <em>fig=None</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="certpoison.plotter.Plotter.draw_decision_boundary">
+<code class="descname">draw_decision_boundary</code><span class="sig-paren">(</span><em>params</em>, <em>bias</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.draw_decision_boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.draw_decision_boundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw Decision Boundary</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>params</strong></p>
+<p class="last"><strong>bias</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.draw_line">
+<code class="descname">draw_line</code><span class="sig-paren">(</span><em>y0=None</em>, <em>y1=None</em>, <em>x0=None</em>, <em>x1=None</em>, <em>color=None</em>, <em>alpha=1</em>, <em>linestyle='-'</em>, <em>linewidth=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.draw_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.draw_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw Lines</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>y0</strong></p>
+<p><strong>y1</strong></p>
+<p><strong>x0</strong></p>
+<p><strong>x1</strong></p>
+<p><strong>color</strong></p>
+<p><strong>alpha</strong></p>
+<p><strong>linestyle</strong></p>
+<p class="last"><strong>linewidth</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.draw_plane">
+<code class="descname">draw_plane</code><span class="sig-paren">(</span><em>v</em>, <em>mu</em>, <em>r</em>, <em>color=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.draw_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.draw_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw Plane</p>
+<p>Draws line corresponding to v^T x = r</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>v</strong></p>
+<p><strong>mu</strong></p>
+<p><strong>r</strong></p>
+<p class="last"><strong>color</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.get_boundaries">
+<code class="descname">get_boundaries</code><span class="sig-paren">(</span><em>X</em>, <em>padding=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.get_boundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.get_boundaries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Boundaries</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p><strong>padding</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">x_min</p>
+<p>x_max</p>
+<p>y_min</p>
+<p class="last">y_max</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.plot_points_manual">
+<code class="descname">plot_points_manual</code><span class="sig-paren">(</span><em>X</em>, <em>color</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.plot_points_manual"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.plot_points_manual" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manually Plot Points</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p class="last"><strong>color</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.plot_points_poison">
+<code class="descname">plot_points_poison</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>linewidth=2</em>, <em>alpha=0.4</em>, <em>marker='o'</em>, <em>edgecolor='black'</em>, <em>poscolor='red'</em>, <em>negcolor='blue'</em>, <em>size=80</em>, <em>linestyle='-'</em>, <em>label=None</em>, <em>zorder=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.plot_points_poison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.plot_points_poison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Poisoned Points</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p><strong>Y</strong></p>
+<p><strong>linewidth</strong></p>
+<p><strong>alpha</strong></p>
+<p><strong>marker</strong></p>
+<p><strong>edgecolor</strong></p>
+<p><strong>poscolor</strong></p>
+<p><strong>negcolor</strong></p>
+<p><strong>size</strong></p>
+<p><strong>linestyle</strong></p>
+<p><strong>label</strong></p>
+<p class="last"><strong>zorder</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.plot_points_train">
+<code class="descname">plot_points_train</code><span class="sig-paren">(</span><em>X</em>, <em>Y</em>, <em>linewidth=1</em>, <em>alpha=0.4</em>, <em>subsample=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.plot_points_train"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.plot_points_train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Training Points</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p><strong>Y</strong></p>
+<p><strong>linewidth</strong></p>
+<p><strong>alpha</strong></p>
+<p class="last"><strong>subsample</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="certpoison.plotter.Plotter.proj">
+<code class="descname">proj</code><span class="sig-paren">(</span><em>X</em>, <em>axis=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#Plotter.proj"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.Plotter.proj" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p><strong>axis</strong></p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">X</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="certpoison.plotter.plot_flat_bwimage">
+<code class="descclassname">certpoison.plotter.</code><code class="descname">plot_flat_bwimage</code><span class="sig-paren">(</span><em>X</em>, <em>y=None</em>, <em>side=28</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/certpoison/plotter.html#plot_flat_bwimage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#certpoison.plotter.plot_flat_bwimage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Black and White Image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong></p>
+<p><strong>y</strong></p>
+<p class="last"><strong>side</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to Certified Defenses for Data Poisoning Attacks’s documentation!</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Website and modified code by: Christopher Frederickson. Based on work by: Jacob Steinhardt, Pang Wei Koh, and Percy Liang..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,595 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>certpoison.data_utils &#8212; Certified Defenses for Data Poisoning Attacks 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for certpoison.data_utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Data Utilities&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sparse</span>
+<span class="kn">from</span> <span class="nn">certpoison</span> <span class="k">import</span> <span class="n">defenses</span><span class="p">,</span> <span class="n">upper_bounds</span>
+
+
+<div class="viewcode-block" id="NumpyEncoder"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.NumpyEncoder">[docs]</a><span class="k">class</span> <span class="nc">NumpyEncoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Numpy Encoder</span>
+
+<span class="sd">    Encode numpy object as JSON.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="NumpyEncoder.default"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.NumpyEncoder.default">[docs]</a>    <span class="k">def</span> <span class="nf">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Override default encoder</span>
+
+<span class="sd">        If the object is a 1D numpy array, encode it as JSON array.</span>
+<span class="sd">        If the object is a numpy float, encode it as a JSON number.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        obj : nd.array, np.floating, or other type</span>
+<span class="sd">            Object to encode</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        json : str</span>
+<span class="sd">            Encoded JSON blob</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span>  <span class="c1"># Can only handle 1D ndarrays</span>
+            <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">NumpyEncoder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">default</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="get_class_map"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_class_map">[docs]</a><span class="k">def</span> <span class="nf">get_class_map</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Get Mapping Between Class Labels and Indices</span>
+
+<span class="sd">    The labels are stores as either -1 or 0, but we sometimes need them as 0</span>
+<span class="sd">    or 1 for indexing into matrices. This &quot;class map&quot; makes it easy to convert</span>
+<span class="sd">    as you can run class_map(Y).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>  <span class="c1"># Store class -1 as index 0 and 1 and index 1</span></div>
+
+
+<div class="viewcode-block" id="get_centroids"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_centroids">[docs]</a><span class="k">def</span> <span class="nf">get_centroids</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">class_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get Centroids for Each Class</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroids of each class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">))</span>
+    <span class="n">num_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">centroids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">num_features</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>            
+        <span class="n">centroids</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">],</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">centroids</span></div>
+
+
+<div class="viewcode-block" id="get_centroid_vec"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_centroid_vec">[docs]</a><span class="k">def</span> <span class="nf">get_centroid_vec</span><span class="p">(</span><span class="n">centroids</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get Centroids Vector</span>
+
+<span class="sd">    Get the unit vector that starts from the centroid of</span>
+<span class="sd">    class 1 and points toward the centroid of class -1.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroids of each class</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    centroids_vec : np.ndarray of shape (1, dimensions)</span>
+<span class="sd">        Unit vector from centroid of class 1 to centroid of class -1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">centroids</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="n">centroid_vec</span> <span class="o">=</span> <span class="n">centroids</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">centroids</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">centroid_vec</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">centroid_vec</span><span class="p">)</span>
+    <span class="n">centroid_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">centroid_vec</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">centroid_vec</span></div>
+
+
+<div class="viewcode-block" id="get_sqrt_inv_cov"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_sqrt_inv_cov">[docs]</a><span class="k">def</span> <span class="nf">get_sqrt_inv_cov</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">class_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get the Square Root of the Inverse Covariance Matrix for Each Class</span>
+
+<span class="sd">    For each class, calculate the square root of the inverse covariance matrix</span>
+<span class="sd">    of the features by singular value decomposition.</span>
+
+<span class="sd">    Note: Can speed this up if necessary</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    sqrt_inv_covs : np.ndarray of shape (classes, instances, dimensions)</span>
+<span class="sd">        Square root of the inverse covariance matrix for each class</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">))</span>
+    <span class="n">num_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">sqrt_inv_covs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">num_features</span><span class="p">,</span> <span class="n">num_features</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>            
+        <span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:],</span> <span class="n">rowvar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">U_cov</span><span class="p">,</span> <span class="n">S_cov</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="n">sqrt_inv_covs</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">U_cov</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">S_cov</span><span class="p">))</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U_cov</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">sqrt_inv_covs</span></div>
+
+
+<div class="viewcode-block" id="get_data_params"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_data_params">[docs]</a><span class="k">def</span> <span class="nf">get_data_params</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">percentile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Helper Function to Calculate Useful Properties About the Dataset</span>
+
+<span class="sd">    Note: Can speed this up if necessary</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    percentile : float</span>
+<span class="sd">        Percentage of data to keep when setting radii</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroids of each class</span>
+<span class="sd">    centroid_vec : np.ndarray of shape (dimensions,)</span>
+<span class="sd">        Unit vector from centroid of class 1 to centroid of class -1</span>
+<span class="sd">    sphere_radii : float</span>
+<span class="sd">        Radius of sphere defense so the percentile criteria is met</span>
+<span class="sd">    slab_radii : float</span>
+<span class="sd">        Radius of slab defense so the percentile criteria is met</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">))</span>
+    <span class="n">num_features</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">centroids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">num_features</span><span class="p">))</span>
+    <span class="n">class_map</span> <span class="o">=</span> <span class="n">get_class_map</span><span class="p">()</span>
+    <span class="n">centroids</span> <span class="o">=</span> <span class="n">get_centroids</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">class_map</span><span class="p">)</span>
+
+    <span class="c1"># Get radii for sphere</span>
+    <span class="n">sphere_radii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">dists</span> <span class="o">=</span> <span class="n">defenses</span><span class="o">.</span><span class="n">compute_dists_under_Q</span><span class="p">(</span>    
+        <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span>
+        <span class="n">Q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">centroids</span><span class="o">=</span><span class="n">centroids</span><span class="p">,</span>
+        <span class="n">class_map</span><span class="o">=</span><span class="n">class_map</span><span class="p">,</span>    
+        <span class="n">norm</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>            
+        <span class="n">sphere_radii</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">],</span> <span class="n">percentile</span><span class="p">)</span>
+
+    <span class="c1"># Get vector between centroids</span>
+    <span class="n">centroid_vec</span> <span class="o">=</span> <span class="n">get_centroid_vec</span><span class="p">(</span><span class="n">centroids</span><span class="p">)</span>
+
+    <span class="c1"># Get radii for slab</span>
+    <span class="n">slab_radii</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>            
+        <span class="n">dists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span> 
+            <span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid_vec</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="n">centroids</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">],</span> <span class="p">:]</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">centroid_vec</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span>            
+        <span class="n">slab_radii</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">dists</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">class_map</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radii</span><span class="p">,</span> <span class="n">slab_radii</span></div>
+
+
+<div class="viewcode-block" id="add_points"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.add_points">[docs]</a><span class="k">def</span> <span class="nf">add_points</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">num_copies</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add points to the dataset</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Features of points to add</span>
+<span class="sd">    y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Labels of points to add</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Dataset features</span>
+<span class="sd">    Y : np.ndarray of shape (instances)</span>
+<span class="sd">        Dataset labels</span>
+<span class="sd">    num_copies : int</span>
+<span class="sd">        Number of copies of the points to add</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Modified dataset features</span>
+<span class="sd">    Y_modified : np.ndarray of shape (instances,)</span>
+<span class="sd">        Modified dataset labels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">num_copies</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span>
+
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span>
+            <span class="n">X</span><span class="p">,</span> 
+            <span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">num_copies</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)))))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span> 
+            <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">num_copies</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> 
+            <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">Y_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">num_copies</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span></div>
+
+
+<div class="viewcode-block" id="copy_random_points"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.copy_random_points">[docs]</a><span class="k">def</span> <span class="nf">copy_random_points</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">mask_to_choose_from</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">target_class</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_copies</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
+                       <span class="n">random_seed</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Copy Random Points from a Dataset</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    mask_to_choose_from : np.ndarray of shape (instances,) and dtype=bool</span>
+<span class="sd">        Only copy from points where mask_to_choose_from == True</span>
+<span class="sd">    target_class : int</span>
+<span class="sd">        Only copy from class target_class</span>
+<span class="sd">    num_copies: int</span>
+<span class="sd">        Number of points to copy</span>
+<span class="sd">    random_seed : int</span>
+<span class="sd">        Numpy random seed</span>
+<span class="sd">    replace : bool</span>
+<span class="sd">        Copy with replacement</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_modified : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Copied dataset features</span>
+<span class="sd">    Y_modified : np.ndarray of shape (instances,)</span>
+<span class="sd">        Copied dataset labels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>    
+    <span class="n">combined_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">==</span> <span class="n">target_class</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mask_to_choose_from</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">combined_mask</span> <span class="o">=</span> <span class="n">combined_mask</span> <span class="o">&amp;</span> <span class="n">mask_to_choose_from</span>
+
+    <span class="n">idx_to_copy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">combined_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">num_copies</span><span class="p">,</span>
+        <span class="n">replace</span><span class="o">=</span><span class="n">replace</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">sparse</span><span class="o">.</span><span class="n">issparse</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_to_copy</span><span class="p">,</span> <span class="p">:]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">X_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_to_copy</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">Y_modified</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">Y</span><span class="p">[</span><span class="n">idx_to_copy</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">X_modified</span><span class="p">,</span> <span class="n">Y_modified</span></div>
+    
+
+<div class="viewcode-block" id="threshold"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.threshold">[docs]</a><span class="k">def</span> <span class="nf">threshold</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Set all Negative Values in X to 0</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_clip : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Clipped input features</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="rround"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.rround">[docs]</a><span class="k">def</span> <span class="nf">rround</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Random Round</span>
+
+<span class="sd">    Randomly round number according to the fractional component.</span>
+<span class="sd">    E.g. The number 5.25 has a probability of 0.75 of being rounded</span>
+<span class="sd">    to 5 and a probability of 0.25 of being rounded to 6.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    random_seed : int</span>
+<span class="sd">        Numpy random seed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_rround : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">X_frac</span><span class="p">,</span> <span class="n">X_int</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">modf</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X_int</span> <span class="o">+</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random_sample</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">X_frac</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span></div>
+
+
+<div class="viewcode-block" id="project_onto_sphere"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.project_onto_sphere">[docs]</a><span class="k">def</span> <span class="nf">project_onto_sphere</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">radii</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">class_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Project Dataset onto Sphere</span>
+
+<span class="sd">    For each class, project the data onto a sphere with a</span>
+<span class="sd">    particular radius centered at the class centroid.</span>
+
+<span class="sd">    Note: If the data is already within the sphere, it is unchanged.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    radii : np.ndarray of shape (classes,)</span>
+<span class="sd">        Sphere radius for each class</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroid of each class</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_proj : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Projected features onto sphere</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]</span>        
+        <span class="n">radius</span> <span class="o">=</span> <span class="n">radii</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">centroid</span> <span class="o">=</span> <span class="n">centroids</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">shifts_from_center</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">centroid</span>
+        <span class="n">dists_from_center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">shifts_from_center</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">shifts_from_center</span><span class="p">[</span><span class="n">dists_from_center</span> <span class="o">&gt;</span> <span class="n">radius</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*=</span> <span class="n">radius</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">dists_from_center</span><span class="p">[</span><span class="n">dists_from_center</span> <span class="o">&gt;</span> <span class="n">radius</span><span class="p">],</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">shifts_from_center</span> <span class="o">+</span> <span class="n">centroid</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of (</span><span class="si">%s</span><span class="s2">) points projected onto sphere: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dists_from_center</span> <span class="o">&gt;</span> <span class="n">radius</span><span class="p">)))</span>
+
+    <span class="k">return</span> <span class="n">X</span></div>
+ 
+
+<div class="viewcode-block" id="project_onto_slab"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.project_onto_slab">[docs]</a><span class="k">def</span> <span class="nf">project_onto_slab</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">radii</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">class_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Project Dataset onto Slab</span>
+
+<span class="sd">    For each class, project the data a slab given by the equation</span>
+
+<span class="sd">    .. math</span>
+<span class="sd">        |&lt;X - Centroid1, Centroid1 - Cendroid2&gt;| &lt;= Radius</span>
+
+<span class="sd">    Note: If the data is already in the slab, it is unchanged.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    v : np.ndarray of shape (1, dimensions)</span>
+<span class="sd">        Centroid vector (v^T x needs to be within radius of v^T centroid)</span>
+<span class="sd">    radii : np.ndarray of shape (classes,)</span>
+<span class="sd">        Slab radius for each class</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroid of each class</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_proj : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Projected features onto slab</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">v</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]</span>
+        <span class="n">radius</span> <span class="o">=</span> <span class="n">radii</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">centroid</span> <span class="o">=</span> <span class="n">centroids</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="c1"># If v^T x is too large, then dists_along_v is positive</span>
+        <span class="c1"># If it&#39;s too small, then dists_along_v is negative</span>
+        <span class="n">dists_along_v</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">centroid</span><span class="p">)</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">shifts_along_v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">dists_along_v</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">dists_along_v</span><span class="p">,</span> <span class="o">-</span><span class="n">radius</span><span class="p">,</span> <span class="n">radius</span><span class="p">),</span>
+            <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">X</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-=</span> <span class="n">shifts_along_v</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of (</span><span class="si">%s</span><span class="s2">) points projected onto slab: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dists_along_v</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">radius</span><span class="p">)))</span>
+
+    <span class="k">return</span> <span class="n">X</span></div>
+
+
+<div class="viewcode-block" id="get_projection_fn"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.get_projection_fn">[docs]</a><span class="k">def</span> <span class="nf">get_projection_fn</span><span class="p">(</span><span class="n">X_clean</span><span class="p">,</span> <span class="n">Y_clean</span><span class="p">,</span> <span class="n">sphere</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slab</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">percentile</span><span class="o">=</span><span class="mi">70</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get Projection Function</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X_clean : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Clean input features</span>
+<span class="sd">    Y_clean : np.ndarray of shape (instances,)</span>
+<span class="sd">        Clean input labels</span>
+<span class="sd">    sphere : bool</span>
+<span class="sd">        Use sphere projection?</span>
+<span class="sd">    slab : bool</span>
+<span class="sd">        Use slab projection?</span>
+<span class="sd">    percentile : float</span>
+<span class="sd">        Percentage of data to keep when setting radii</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    project_onto_feasible_set : function</span>
+<span class="sd">        Function to project data onto the feasible set</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">class_map</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radii</span><span class="p">,</span> <span class="n">slab_radii</span> <span class="o">=</span> <span class="n">get_data_params</span><span class="p">(</span><span class="n">X_clean</span><span class="p">,</span> <span class="n">Y_clean</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sphere</span> <span class="ow">and</span> <span class="n">slab</span><span class="p">:</span>
+        <span class="n">projector</span> <span class="o">=</span> <span class="n">upper_bounds</span><span class="o">.</span><span class="n">Projector</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">project_onto_feasible_set</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+            <span class="n">num_examples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">proj_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_examples</span><span class="p">):</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">Y</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="n">class_idx</span> <span class="o">=</span> <span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]</span>
+                <span class="n">centroid</span> <span class="o">=</span> <span class="n">centroids</span><span class="p">[</span><span class="n">class_idx</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="n">sphere_radius</span> <span class="o">=</span> <span class="n">sphere_radii</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span>
+                <span class="n">slab_radius</span> <span class="o">=</span> <span class="n">slab_radii</span><span class="p">[</span><span class="n">class_idx</span><span class="p">]</span>
+                <span class="n">proj_X</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">projector</span><span class="o">.</span><span class="n">project_onto_feasible_set</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">centroid</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radius</span><span class="p">,</span> <span class="n">slab_radius</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">proj_X</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">project_onto_feasible_set</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">sphere</span><span class="p">:</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">project_onto_sphere</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">sphere_radii</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">class_map</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">slab</span><span class="p">:</span>
+                <span class="n">X</span> <span class="o">=</span> <span class="n">project_onto_slab</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">slab_radii</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">class_map</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">X</span>
+
+    <span class="k">return</span> <span class="n">project_onto_feasible_set</span></div>
+
+
+<div class="viewcode-block" id="filter_points_outside_feasible_set"><a class="viewcode-back" href="../../api.html#certpoison.data_utils.filter_points_outside_feasible_set">[docs]</a><span class="k">def</span> <span class="nf">filter_points_outside_feasible_set</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">centroids</span><span class="p">,</span> <span class="n">centroid_vec</span><span class="p">,</span> <span class="n">sphere_radii</span><span class="p">,</span>
+                                       <span class="n">slab_radii</span><span class="p">,</span> <span class="n">class_map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Remove Points Outside of Feasible Set</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Input features</span>
+<span class="sd">    Y : np.ndarray of shape (instances,)</span>
+<span class="sd">        Input labels</span>
+<span class="sd">    centroids : np.ndarray of shape (classes, dimensions)</span>
+<span class="sd">        Centroid for each class</span>
+<span class="sd">    centroid_vec : np.ndarray of shape (1, dimensions)</span>
+<span class="sd">        Vector between centroids</span>
+<span class="sd">    sphere_radii : np.ndarray of shape (classes,)</span>
+<span class="sd">        Radii to use with sphere projection</span>
+<span class="sd">    slab_radii : np.ndarray of shape (classes,)</span>
+<span class="sd">        Radii to use with slab projection</span>
+<span class="sd">    class_map : dict</span>
+<span class="sd">        Class to index mapping</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    X_filtered : np.ndarray of shape (instances, dimensions)</span>
+<span class="sd">        Filtered input features</span>
+<span class="sd">    Y_filtered : np.ndarray of shape (instances,)</span>
+<span class="sd">        Filtered input labels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sphere_dists</span> <span class="o">=</span> <span class="n">defenses</span><span class="o">.</span><span class="n">compute_dists_under_Q</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span> 
+        <span class="n">Y</span><span class="p">,</span> 
+        <span class="n">Q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+        <span class="n">centroids</span><span class="o">=</span><span class="n">centroids</span><span class="p">,</span>
+        <span class="n">class_map</span><span class="o">=</span><span class="n">class_map</span><span class="p">)</span>
+    <span class="n">slab_dists</span> <span class="o">=</span> <span class="n">defenses</span><span class="o">.</span><span class="n">compute_dists_under_Q</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span> 
+        <span class="n">Y</span><span class="p">,</span> 
+        <span class="n">Q</span><span class="o">=</span><span class="n">centroid_vec</span><span class="p">,</span> 
+        <span class="n">centroids</span><span class="o">=</span><span class="n">centroids</span><span class="p">,</span>
+        <span class="n">class_map</span><span class="o">=</span><span class="n">class_map</span><span class="p">)</span>
+
+    <span class="n">idx_to_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Y</span><span class="p">):</span>
+        <span class="n">idx_to_keep</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="n">sphere_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">sphere_radii</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]]]]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">idx_to_keep</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="n">slab_dists</span><span class="p">[</span><span class="n">Y</span> <span class="o">==</span> <span class="n">y</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">slab_radii</span><span class="p">[</span><span class="n">class_map</span><span class="p">[</span><span class="n">y</span><span class="p">]]]]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">idx_to_keep</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">[</span><span class="n">idx_to_keep</span><span class="p">,</span> <span class="p">:],</span> <span class="n">Y</span><span class="p">[</span><span class="n">idx_to_keep</span><span class="p">]</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Website and modified code by: Christopher Frederickson. Based on work by: Jacob Steinhardt, Pang Wei Koh, and Percy Liang..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
