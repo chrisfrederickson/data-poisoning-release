@@ -1,21 +1,5 @@
-
-
-
-  
-
-import sys
-
-import numpy as np
-import pandas as pd
-from sklearn import linear_model, preprocessing, cluster, metrics, svm, model_selection
-
 import matplotlib.pyplot as plt
-import seaborn as sns
-import scipy.linalg as slin
-import scipy.sparse.linalg as sparselin
-import scipy.sparse as sparse
 
-import data_utils as data
 
 def print_cv_results(results):
     print('Cross-validation results:')

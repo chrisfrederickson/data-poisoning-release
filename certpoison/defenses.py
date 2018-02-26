@@ -7,7 +7,7 @@ import seaborn as sns
 import scipy.linalg as slin
 import scipy.sparse.linalg as sparselin
 import scipy.sparse as sparse
-import data_utils as data
+from certpoison import data_utils as data
 
 
 def remove_quantile(X, Y, dists, frac_to_remove):

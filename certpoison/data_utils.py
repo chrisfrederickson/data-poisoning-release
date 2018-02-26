@@ -3,8 +3,7 @@
 import json
 import numpy as np
 import scipy.sparse as sparse
-import defenses
-import upper_bounds
+from certpoison import defenses, upper_bounds
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -365,8 +364,8 @@ def project_onto_slab(X, Y, v, radii, centroids, class_map):
 
     For each class, project the data a slab given by the equation
 
-    |<X - Centroid1, Centroid1 - Cendroid2>| <= Radius
-                     \ Centroid Vector v /
+    .. math
+        |<X - Centroid1, Centroid1 - Cendroid2>| <= Radius
 
     Note: If the data is already in the slab, it is unchanged.
 

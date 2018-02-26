@@ -3,9 +3,7 @@
 import argparse
 import numpy as np
 import scipy.sparse as sparse
-import datasets
-import data_utils as data
-import defenses
+from certpoison import data_utils as data, datasets, defenses
 
 ##############
 # Parameters #

@@ -18,11 +18,9 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbconvert import HTMLExporter
 
-import data_utils as data
-import datasets
-import defenses
+from certpoison import data_utils as data, datasets, defenses
 from legacy import defense_testers
-from upper_bounds import hinge_loss
+from certpoison.upper_bounds import hinge_loss
 
 parser = argparse.ArgumentParser()
 parser.add_argument('dataset_name', help='One of: imdb, enron, dogfish')

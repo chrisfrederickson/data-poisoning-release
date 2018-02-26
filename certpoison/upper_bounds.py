@@ -628,11 +628,17 @@ class Minimizer(object):
     line of the loop in Algorithm 1.
 
     For the sphere defense this is the optimization problem:
-        max_x   1 - y w^T x
-        s.t.    || x - c ||2 < r
+
+    .. math
+        max_x &  1 - y w^T x
+        s.t.  &  || x - c ||2 < r
+
     For the slab defense this is the optimization problem:
-        max_x   1 - y w^T x
-        s.t.    |<x - c, c_vec>| < r
+
+    .. math
+        max_x & 1 - y w^T x
+        s.t.  &  |<x - c, c_vec>| < r
+
     where
         c :      class centroid
         c_vec :  vector between the two class centroids
@@ -806,7 +812,7 @@ class Projector(object):
     """ Projector ???
 
     Solves the optimization problem:
-        min_
+    TODO
     """
 
     def __init__(self, use_sphere=True, use_slab=True):

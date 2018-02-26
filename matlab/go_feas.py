@@ -1,8 +1,6 @@
 from subprocess import call
 
-import sys
-
-import datasets
+from certpoison import datasets
 
 for dataset_name in ['enron']:
 

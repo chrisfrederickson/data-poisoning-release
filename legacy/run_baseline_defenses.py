@@ -6,12 +6,8 @@
 import os 
 import shutil
 from subprocess import call
-import numpy as np
-import scipy.sparse as sparse
-import scipy.io as sio
-import IPython
 
-import datasets
+from certpoison import datasets
 
 epsilon = 0.1
 random_seed = 1

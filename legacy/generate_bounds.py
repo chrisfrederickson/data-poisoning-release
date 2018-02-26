@@ -10,10 +10,8 @@ import numpy as np
 
 import scipy.sparse as sparse
 
-import data_utils as data
-import datasets
-import upper_bounds
-from upper_bounds import hinge_loss, hinge_grad
+from certpoison import data_utils as data, datasets, upper_bounds
+from certpoison.upper_bounds import hinge_loss, hinge_grad
 
 
 ### Parameters

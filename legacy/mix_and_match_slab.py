@@ -7,7 +7,7 @@ import os
 
 import numpy as np
 
-import datasets
+from certpoison import datasets
 
 for dataset_name in ['dogfish', 'mnist_17']:
 

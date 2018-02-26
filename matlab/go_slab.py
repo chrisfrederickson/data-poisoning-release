@@ -1,9 +1,7 @@
-from subprocess import call, Popen
+from subprocess import Popen
 import shlex
 
-import sys
-
-import datasets
+from certpoison import datasets
 
 procs = []
 

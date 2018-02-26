@@ -1,5 +1,7 @@
 # Certified Defenses for Data Poisoning Attacks
 
+**NOTE: I highly recommend that you do not try and use this as a python package in its current state!**
+
 This fork is for me to make misc changes tailored to my own workflow. See the original paper for full details.
 
 > Jacob Steinhardt, Pang Wei Koh, and Percy Liang

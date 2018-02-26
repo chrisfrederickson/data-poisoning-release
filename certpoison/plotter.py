@@ -6,7 +6,21 @@ import seaborn as sns
 
 
 class Plotter(object):
+    """Plotter"""
+
     def __init__(self, X, axes=None, figsize=None, padding=1, axis_equal=False, fig=None, ax=None):
+        """Plotter
+
+        Parameters
+        ----------
+        X
+        axes
+        figsize
+        padding
+        axis_equal
+        fig
+        ax
+        """
         sns.set(font_scale=1.5)
         sns.set_style(style='white')
         # sns.set_style({'font.sans-serif': [u'Droid Sans']})
@@ -43,19 +57,54 @@ class Plotter(object):
         self.ax = ax
 
     def proj(self, X, axis=None):
+        """ Project
+
+        Parameters
+        ----------
+        X
+        axis
+
+        Returns
+        -------
+        X
+        """
         if axis is None:
             return X.dot(self.axes.T)
         else:
             return X.dot(self.axes[axis, :])
     
     def get_boundaries(self, X, padding=1):
+        """ Get Boundaries
+
+        Parameters
+        ----------
+        X
+        padding
+
+        Returns
+        -------
+        x_min
+        x_max
+        y_min
+        y_max
+        """
         x_min = np.min(self.proj(X, 0)) - padding
         x_max = np.max(self.proj(X, 0)) + padding
         y_min = np.min(self.proj(X, 1)) - padding
         y_max = np.max(self.proj(X, 1)) + padding
         return x_min, x_max, y_min, y_max
 
-    def plot_points_train(self, X, Y, linewidth=1, alpha=0.4, subsample=None):       
+    def plot_points_train(self, X, Y, linewidth=1, alpha=0.4, subsample=None):
+        """ Plot Training Points
+
+        Parameters
+        ----------
+        X
+        Y
+        linewidth
+        alpha
+        subsample
+        """
         if subsample:
             idx_to_sample = np.random.choice(
                 X.shape[0], 
@@ -72,7 +121,24 @@ class Plotter(object):
     
     def plot_points_poison(self, X, Y, linewidth=2, alpha=0.4, marker='o', edgecolor='black', 
                            poscolor='red', negcolor='blue', size=80, linestyle='-', label=None,
-                           zorder=4):    
+                           zorder=4):
+        """ Plot Poisoned Points
+
+        Parameters
+        ----------
+        X
+        Y
+        linewidth
+        alpha
+        marker
+        edgecolor
+        poscolor
+        negcolor
+        size
+        linestyle
+        label
+        zorder
+        """
         colors = [poscolor if y == 1 else negcolor for y in Y]
         self.ax.scatter(
             self.proj(X, 0),
@@ -81,12 +147,26 @@ class Plotter(object):
             zorder=zorder)
 
     def plot_points_manual(self, X, color):
+        """ Manually Plot Points
+
+        Parameters
+        ----------
+        X
+        color
+        """
         self.ax.scatter(
             self.proj(X, 0),
             self.proj(X, 1),
             s=80, c=color, edgecolor="white", linewidth=1, alpha=0.7)    
     
     def draw_decision_boundary(self, params, bias):
+        """ Draw Decision Boundary
+
+        Parameters
+        ----------
+        params
+        bias
+        """
         # This assumes that the second axis is the orthogonal complement of w (params) wrt v 
         # Probably should refactor this class to make this assumption explicit
         y0 = (-self.x_min * params.dot(self.axes[0, :]) - bias) / params.dot(self.axes[1, :])
@@ -94,6 +174,19 @@ class Plotter(object):
         self.draw_line(y0=y0, y1=y1)
 
     def draw_line(self, y0=None, y1=None, x0=None, x1=None, color=None, alpha=1, linestyle='-', linewidth=1):
+        """ Draw Lines
+
+        Parameters
+        ----------
+        y0
+        y1
+        x0
+        x1
+        color
+        alpha
+        linestyle
+        linewidth
+        """
         if y0 is None: y0 = self.y_min
         if y1 is None: y1 = self.y_max
         if x0 is None: x0 = self.x_min
@@ -105,8 +198,16 @@ class Plotter(object):
             self.ax.plot([x0, x1], [y0, y1], color=color, alpha=alpha, linestyle=linestyle, linewidth=linewidth)
 
     def draw_plane(self, v, mu, r, color=None):
-        """
+        """ Draw Plane
+
         Draws line corresponding to v^T x = r
+
+        Parameters
+        ----------
+        v
+        mu
+        r
+        color
         """
         v0 = v.dot(self.axes[0, :])
         v1 = v.dot(self.axes[1, :])
@@ -118,10 +219,17 @@ class Plotter(object):
     
 
 def plot_flat_bwimage(X, y=None, side=28):
+    """ Plot Black and White Image
+
+    Parameters
+    ----------
+    X
+    y
+    side
+    """
     X = np.reshape(X, (side, side)).T
         
     with sns.axes_style("white"):
         if y is not None:
             plt.title('Label is %s' % y)
         plt.imshow(X, cmap='gray', interpolation='none')
-

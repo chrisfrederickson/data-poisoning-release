@@ -4,9 +4,7 @@ import argparse
 import numpy as np
 import scipy.sparse as sparse
 import scipy.io as sio
-import data_utils as data
-import datasets
-import upper_bounds
+from certpoison import data_utils as data, datasets, upper_bounds
 
 ##############
 # Parameters #
