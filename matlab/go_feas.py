@@ -1,6 +1,6 @@
 from subprocess import call
 
-from certpoison import datasets
+from certml import datasets
 
 for dataset_name in ['enron']:
 

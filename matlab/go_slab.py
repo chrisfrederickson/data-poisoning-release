@@ -1,7 +1,7 @@
 from subprocess import Popen
 import shlex
 
-from certpoison import datasets
+from certml import datasets
 
 procs = []
 

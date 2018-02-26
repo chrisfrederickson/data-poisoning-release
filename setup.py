@@ -1,14 +1,14 @@
 """Certify Poisoning Attack Defenses"""
 
 from distutils.core import setup
-from certpoison import __version__
+from certml import __version__
 
 setup(
-    name='cert-poison',
+    name='certml',
     version=__version__,
     author=('Christopher Frederickson'),
     author_email=('fredericc0@students.rowan.edu'),
-    packages=['certpoison'],
+    packages=['certml'],
     url='',
     description='Certify data-based poisoning attack defenses. Based on work by Steinhardt et al. See: https://github.com/chrisfrederickson/data-poisoning-release',
     long_description=open('README.rst').read(),

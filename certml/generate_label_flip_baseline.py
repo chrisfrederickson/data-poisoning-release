@@ -3,7 +3,7 @@
 import argparse
 import numpy as np
 import scipy.sparse as sparse
-from certpoison import data_utils as data, datasets, defenses
+from certml import data_utils as data, datasets, defenses
 
 ##############
 # Parameters #

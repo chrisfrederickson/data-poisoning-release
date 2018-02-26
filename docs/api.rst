@@ -1,29 +1,29 @@
-The certpoison API reference
+The certml API reference
 =============================
-.. automodule:: certpoison
+.. automodule:: certml
     :members:
 
 The “upper_bounds” module
 -------------------------
-.. automodule:: certpoison.upper_bounds
+.. automodule:: certml.upper_bounds
     :members:
 
 The “defenses” module
 ---------------------
-.. automodule:: certpoison.defenses
+.. automodule:: certml.defenses
     :members:
 
 The “data_utils” module
 -----------------------
-.. automodule:: certpoison.data_utils
+.. automodule:: certml.data_utils
     :members:
 
 The “datasets” module
 ---------------------
-.. automodule:: certpoison.datasets
+.. automodule:: certml.datasets
     :members:
 
 The “plotter” module
 --------------------
-.. automodule:: certpoison.plotter
+.. automodule:: certml.plotter
     :members:

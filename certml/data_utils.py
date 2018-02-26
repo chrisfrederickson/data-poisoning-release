@@ -3,7 +3,7 @@
 import json
 import numpy as np
 import scipy.sparse as sparse
-from certpoison import defenses, upper_bounds
+from certml import defenses, upper_bounds
 
 
 class NumpyEncoder(json.JSONEncoder):

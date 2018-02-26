@@ -7,7 +7,7 @@ import os
 import shutil
 from subprocess import call
 
-from certpoison import datasets
+from certml import datasets
 
 epsilon = 0.1
 random_seed = 1

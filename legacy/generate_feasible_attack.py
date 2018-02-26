@@ -2,7 +2,7 @@ import scipy.sparse as sparse
 
 import IPython
 
-from certpoison import data_utils as data, datasets
+from certml import data_utils as data, datasets
 
 ### This just thresholds and rounds IMDB
 ### Not guaranteed to actually be feasible

@@ -9,7 +9,7 @@ import argparse
 import numpy as np
 import scipy.sparse as sparse
 
-from certpoison import data_utils as data, datasets
+from certml import data_utils as data, datasets
 
 import tensorflow as tf
 from influence.influence.smooth_hinge import SmoothHinge
