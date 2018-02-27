@@ -37,7 +37,7 @@ def remove_quantile(X, Y, dists, frac_to_remove):
         Indices of the input data that is kept
 
     """
-    if len(dists.shape) == 2: # Accept column vectors but reshape
+    if len(dists.shape) == 2:  # Accept column vectors but reshape
         assert dists.shape[1] == 1
         dists = np.reshape(dists, -1)               
     

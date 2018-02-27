@@ -1,58 +1,30 @@
 """Data Utilities"""
 
-import json
 import numpy as np
 import scipy.sparse as sparse
 from certml import defenses, upper_bounds
 
 
-# Migrated
-class NumpyEncoder(json.JSONEncoder):
-    """Numpy Encoder
+def generate_class_map(y):
+    """ Generate Class Map
 
-    Encode numpy object as JSON.
-    """
-    def default(self, obj):
-        """Override default encoder
-
-        If the object is a 1D numpy array, encode it as JSON array.
-        If the object is a numpy float, encode it as a JSON number.
-
-        Parameters
-        ----------
-        obj : nd.array, np.floating, or other type
-            Object to encode
-
-        Returns
-        -------
-        json : str
-            Encoded JSON blob
-        """
-        if isinstance(obj, np.ndarray):
-            assert len(np.shape(obj)) == 1  # Can only handle 1D ndarrays
-            return obj.tolist()
-        if isinstance(obj, np.floating):
-            return float(obj)
-        else:
-            return super(NumpyEncoder, self).default(obj)
-
-
-def get_class_map():
-    """ Get Mapping Between Class Labels and Indices
-
-    The labels are stores as either -1 or 0, but we sometimes need them as 0
-    or 1 for indexing into matrices. This "class map" makes it easy to convert
-    as you can run class_map(Y).
+    Parameters
+    ----------
+    y : np.ndarray of shape (instances,)
+        Input labels
 
     Returns
     -------
     class_map : dict
-        Class to index mapping
+        Mapping from class to index
     """
-    return {-1: 0, 1: 1}  # Store class -1 as index 0 and 1 and index 1
+    class_map = {}
+    classes = np.unique(y)
+    for idx, cls in enumerate(classes):
+        class_map[cls] = idx
+    return class_map
 
 
-# Migrated
 def get_centroids(X, Y, class_map):
     """ Get Centroids for Each Class
 
@@ -73,12 +45,11 @@ def get_centroids(X, Y, class_map):
     num_classes = len(set(Y))
     num_features = X.shape[1]
     centroids = np.zeros((num_classes, num_features))
-    for y in set(Y):            
+    for y in set(Y):
         centroids[class_map[y], :] = np.mean(X[Y == y, :], axis=0)
     return centroids
 
 
-# Migrated
 def get_centroid_vec(centroids):
     """ Get Centroids Vector
 
@@ -102,7 +73,6 @@ def get_centroid_vec(centroids):
     return centroid_vec
 
 
-# Migrated
 def get_sqrt_inv_cov(X, Y, class_map):
     """ Get the Square Root of the Inverse Covariance Matrix for Each Class
 
@@ -130,7 +100,7 @@ def get_sqrt_inv_cov(X, Y, class_map):
     num_features = X.shape[1]
     sqrt_inv_covs = np.zeros((num_classes, num_features, num_features))
 
-    for y in set(Y):            
+    for y in set(Y):
         cov = np.cov(X[Y == y, :], rowvar=False)
         U_cov, S_cov, _ = np.linalg.svd(cov)
         sqrt_inv_covs[class_map[y], ...] = U_cov.dot(np.diag(1 / np.sqrt(S_cov)).dot(U_cov.T))
@@ -138,7 +108,6 @@ def get_sqrt_inv_cov(X, Y, class_map):
     return sqrt_inv_covs
 
 
-# Migrated
 def get_data_params(X, Y, percentile):
     """Helper Function to Calculate Useful Properties About the Dataset
 
@@ -174,13 +143,13 @@ def get_data_params(X, Y, percentile):
 
     # Get radii for sphere
     sphere_radii = np.zeros(2)
-    dists = defenses.compute_dists_under_Q(    
+    dists = defenses.compute_dists_under_Q(
         X, Y,
         Q=None,
         centroids=centroids,
-        class_map=class_map,    
+        class_map=class_map,
         norm=2)
-    for y in set(Y):            
+    for y in set(Y):
         sphere_radii[class_map[y]] = np.percentile(dists[Y == y], percentile)
 
     # Get vector between centroids
@@ -188,15 +157,14 @@ def get_data_params(X, Y, percentile):
 
     # Get radii for slab
     slab_radii = np.zeros(2)
-    for y in set(Y):            
-        dists = np.abs( 
-            (X[Y == y, :].dot(centroid_vec.T) - centroids[class_map[y], :].dot(centroid_vec.T)))            
+    for y in set(Y):
+        dists = np.abs(
+            (X[Y == y, :].dot(centroid_vec.T) - centroids[class_map[y], :].dot(centroid_vec.T)))
         slab_radii[class_map[y]] = np.percentile(dists, percentile)
 
     return class_map, centroids, centroid_vec, sphere_radii, slab_radii
 
 
-# Migrated
 def add_points(x, y, X, Y, num_copies=1):
     """Add points to the dataset
 
@@ -225,20 +193,19 @@ def add_points(x, y, X, Y, num_copies=1):
 
     if sparse.issparse(X):
         X_modified = sparse.vstack((
-            X, 
+            X,
             sparse.csr_matrix(
                 np.tile(x, num_copies).reshape(-1, len(x)))))
     else:
         X_modified = np.append(
-            X, 
-            np.tile(x, num_copies).reshape(-1, len(x)), 
+            X,
+            np.tile(x, num_copies).reshape(-1, len(x)),
             axis=0)
     Y_modified = np.append(Y, np.tile(y, num_copies))
     return X_modified, Y_modified
 
 
-# Migrated
-def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copies=1, 
+def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copies=1,
                        random_seed=18, replace=False):
     """ Copy Random Points from a Dataset
 
@@ -267,7 +234,7 @@ def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copie
         Copied dataset labels
     """
 
-    np.random.seed(random_seed)    
+    np.random.seed(random_seed)
     combined_mask = (np.array(Y, dtype=int) == target_class)
     if mask_to_choose_from is not None:
         combined_mask = combined_mask & mask_to_choose_from
@@ -283,9 +250,8 @@ def copy_random_points(X, Y, mask_to_choose_from=None, target_class=1, num_copie
         X_modified = np.append(X, X[idx_to_copy, :], axis=0)
     Y_modified = np.append(Y, Y[idx_to_copy])
     return X_modified, Y_modified
-    
 
-# Migrated
+
 def threshold(X):
     """ Set all Negative Values in X to 0
 
@@ -302,7 +268,6 @@ def threshold(X):
     return np.clip(X, 0, np.max(X))
 
 
-# Migrated
 def rround(X, random_seed=3):
     """ Random Round
 
@@ -326,7 +291,6 @@ def rround(X, random_seed=3):
     return X
 
 
-# Migrated
 def project_onto_sphere(X, Y, radii, centroids, class_map):
     """ Project Dataset onto Sphere
 
@@ -354,22 +318,22 @@ def project_onto_sphere(X, Y, radii, centroids, class_map):
         Projected features onto sphere
     """
     for y in set(Y):
-        idx = class_map[y]        
+        idx = class_map[y]
         radius = radii[idx]
         centroid = centroids[idx, :]
 
         shifts_from_center = X[Y == y, :] - centroid
         dists_from_center = np.linalg.norm(shifts_from_center, axis=1)
 
-        shifts_from_center[dists_from_center > radius, :] *= radius / np.reshape(dists_from_center[dists_from_center > radius], (-1, 1))
+        shifts_from_center[dists_from_center > radius, :] *= radius / np.reshape(
+            dists_from_center[dists_from_center > radius], (-1, 1))
         X[Y == y, :] = shifts_from_center + centroid
 
         print("Number of (%s) points projected onto sphere: %s" % (y, np.sum(dists_from_center > radius)))
 
     return X
- 
 
-# Migrated
+
 def project_onto_slab(X, Y, v, radii, centroids, class_map):
     """Project Dataset onto Slab
 
@@ -420,7 +384,6 @@ def project_onto_slab(X, Y, v, radii, centroids, class_map):
     return X
 
 
-# Migrated
 def get_projection_fn(X_clean, Y_clean, sphere=True, slab=True, percentile=70):
     """ Get Projection Function
 
@@ -457,7 +420,8 @@ def get_projection_fn(X_clean, Y_clean, sphere=True, slab=True, percentile=70):
                 centroid = centroids[class_idx, :]
                 sphere_radius = sphere_radii[class_idx]
                 slab_radius = slab_radii[class_idx]
-                proj_X[idx, :] = projector.project_onto_feasible_set(x, centroid, centroid_vec, sphere_radius, slab_radius)
+                proj_X[idx, :] = projector.project_onto_feasible_set(x, centroid, centroid_vec, sphere_radius,
+                                                                     slab_radius)
             return proj_X
 
     else:
@@ -472,7 +436,6 @@ def get_projection_fn(X_clean, Y_clean, sphere=True, slab=True, percentile=70):
     return project_onto_feasible_set
 
 
-# Migrated
 def filter_points_outside_feasible_set(X, Y, centroids, centroid_vec, sphere_radii,
                                        slab_radii, class_map):
     """ Remove Points Outside of Feasible Set
@@ -502,15 +465,15 @@ def filter_points_outside_feasible_set(X, Y, centroids, centroid_vec, sphere_rad
         Filtered input labels
     """
     sphere_dists = defenses.compute_dists_under_Q(
-        X, 
-        Y, 
-        Q=None, 
+        X,
+        Y,
+        Q=None,
         centroids=centroids,
         class_map=class_map)
     slab_dists = defenses.compute_dists_under_Q(
-        X, 
-        Y, 
-        Q=centroid_vec, 
+        X,
+        Y,
+        Q=centroid_vec,
         centroids=centroids,
         class_map=class_map)
 
