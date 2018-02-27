@@ -7,6 +7,7 @@ from sklearn import svm
 import cvxpy as cvx
 
 
+# Migrated
 def hinge_loss(w, b, X, Y, sample_weights=None):
     """ Calculate Hinge Loss
 
@@ -37,6 +38,7 @@ def hinge_loss(w, b, X, Y, sample_weights=None):
         return np.mean(np.maximum(1 - Y * (X.dot(w) + b), 0))
 
 
+# Migrated
 def hinge_grad(w, b, X, Y):
     """ Gradient of Hinge Loss
 
@@ -127,6 +129,7 @@ def sample_lower_bound_attack(X_train, Y_train, x_bs, y_bs, epsilon, num_iter_to
     return X_modified, Y_modified, idx_train, idx_poison
 
 
+# Migrated
 def svm_with_rho_squared(X_train, Y_train, X_test, Y_test, upper_params_norm_sq, use_bias, 
                          weight_decay=None):
     """ Train Support Vector Machine

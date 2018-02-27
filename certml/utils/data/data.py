@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.sparse as sparse
+from scipy.linalg import orth
 from certml import defenses, upper_bounds
 
 
@@ -484,3 +485,31 @@ def filter_points_outside_feasible_set(X, Y, centroids, centroid_vec, sphere_rad
 
     print(np.sum(idx_to_keep))
     return X[idx_to_keep, :], Y[idx_to_keep]
+
+
+def get_projection_matrix(w, centroid, centroid_vec):
+    """ Get Projection Matrix
+
+    Parameters
+    ----------
+    w : np.ndarray of shape (dimensions,)
+    centroid : np.ndarray of shape (classes, dimensions)
+    centroid_vec : np.ndarray of shape (dimensions,)
+
+    Returns
+    -------
+    P : np.ndarray of shape (3, dimensions)
+        Projection matrix that projects a vector onto the subspace spanned by
+            w, centroid, and centroid_vec
+    """
+    subspace = np.concatenate((
+        w.reshape(1, -1),
+        centroid.reshape(1, -1),
+        centroid_vec.reshape(1, -1)),
+        axis=0)
+    P = orth(subspace.T).T
+    while P.shape[0] < 3:
+        P = np.concatenate((P, np.random.normal(size=(1, P.shape[1]))), axis=0)
+        P = orth(P.T).T
+
+    return P
