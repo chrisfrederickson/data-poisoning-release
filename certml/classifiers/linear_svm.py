@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.sparse as sparse
 from sklearn import svm
-from certml.classifiers import CertifiableMixin
+from certml.certify import CertifiableMixin
 
 
 class LinearSVM(svm.LinearSVC, CertifiableMixin):
@@ -35,7 +35,7 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
 
     def fit(self, X, y, sample_weight=None):
         self._cert_x = X
-        self._cert_y = Y
+        self._cert_y = y
         while (self.params_norm_sq is None) or \
                 (self.upper_params_norm_sq > self.params_norm_sq) or \
                 (np.abs(self.upper_params_norm_sq - self.params_norm_sq) > self.rho_sq_tol):
@@ -77,11 +77,14 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
                     (np.abs(self.upper_params_norm_sq - self.params_norm_sq) > self.rho_sq_tol):
                 self.weight_decay = (self.upper_weight_decay + self.lower_weight_decay) / 2
 
-    def cert_x(self):
-        return self._cert_x
-
-    def cert_y(self):
-        return self._cert_y
+    def cert_params(self):
+        params = {
+            'type': 'classifier',
+            'loss': self.cert_loss,
+            'loss_grad': '',
+            'loss_cvx': ''
+        }
+        return params
 
     def cert_loss(self, X, Y, w=None, b=None, sample_weights=None):
         """ Calculate Hinge Loss

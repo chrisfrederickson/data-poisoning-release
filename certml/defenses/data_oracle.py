@@ -3,10 +3,11 @@
 import numpy as np
 from certml.utils.data import generate_class_map, get_centroids, \
     get_centroid_vec, filter_points_outside_feasible_set
-from certml.defenses import CertifiableMixin
+from certml.defenses import BaseDefense
+from certml.certify import CertifiableMixin
 
 
-class DataOracle(object, CertifiableMixin):
+class DataOracle(BaseDefense, CertifiableMixin):
     """Data Oracle Defense
 
     The data oracle defense determined the centroids of the data
@@ -78,7 +79,7 @@ class DataOracle(object, CertifiableMixin):
 
     def cert_params(self):
         params = {
-            'mode': self.mode,
-            'radii': self.radii
+            'type': 'defense',
+            'constraints_cvx': ''
         }
         return params
