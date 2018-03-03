@@ -6,39 +6,60 @@ from certml.utils.data import get_projection_matrix
 from certml.utils.cvx import cvx_dot
 
 
-class UpperBound:
+class UpperBound(object):
 
     def __init__(self, pipeline, norm_sq_constraint=None, max_iter=None, num_iter_to_throw_out=None,
-                 learning_rate=None, init_w=None, init_b=None, verbose=True, print_interval=500):
+                 learning_rate=None, verbose=True, print_interval=500):
+        # Input Parameters
         self.norm_sq_constraint = norm_sq_constraint
         self.max_iter = max_iter
         self.num_iter_to_throw_out = num_iter_to_throw_out
         self.learning_rate = learning_rate
-        self.init_w = init_w
-        self.init_b = init_b
 
+        # Debug Parameters
         self.verbose = verbose
         self.print_interval = print_interval
 
         self.pipeline = pipeline
 
-        # TODO Actually get these values from the pipeline!
-        self.x = None
-        self.y = None
-        self.class_map = None
-        self.loss = None
-        self.loss_grad = None
+        # Extract Pipeline Information
+        cert_params = pipeline.cert_params()
 
-        self.params = None
-        self.centroids = None
-        self.centroid_vec = None
-        self.sphere_radii = None
-        self.slab_radii = None
+        # Verify that the pipeline can be certified
+        # This should really be returned to the user and not using asserts but whatever
+        assert len(cert_params) == 2
+        assert cert_params[0]['type'] == 'defense'
+        assert cert_params[1]['type'] == 'classifier'
 
-        self.minimizer = Minimizer()  # TODO Sphere or slab?
+        defense = cert_params[0]
+        classifier = cert_params[1]
+
+        self.loss = classifier['loss']
+        self.loss_grad = classifier['loss_grad']
+        self.loss_cvx = classifier['loss_cvx']
+        self.x = classifier['data']['features']
+        self.y = classifier['data']['labels']
+
+        start_w = classifier['params']['coef']
+        self.init_w = np.zeros_like(start_w)
+        self.init_b = 0
+
+        self.constraints_cvx = defense['constraints_cvx']
+        self.class_map = defense['data']['class_map']
 
     def certify(self, epsilons):
-        pass
+        total_loss = np.zeros_like(epsilons)
+        good_loss = np.zeros_like(epsilons)
+        bad_loss = np.zeros_like(epsilons)
+
+        for idx, epsilon in enumerate(epsilons):
+            total_loss_i, good_loss_i, bad_loss_i = self.cert_rda(epsilon)
+
+            total_loss[idx] = total_loss_i
+            good_loss[idx] = good_loss_i
+            bad_loss[idx] = bad_loss_i
+
+        return total_loss, good_loss, bad_loss
 
     def cert_rda(self, epsilon):
         """Online Certification Algorithm using Regularized Dual Averaging"""
@@ -95,13 +116,7 @@ class UpperBound:
             for y_b in set(self.y):
 
                 class_idx = self.class_map[y_b]
-                x_b = self.minimizer.minimize_over_feasible_set(
-                    y_b,
-                    w,
-                    self.centroids[class_idx, :],
-                    self.centroid_vec,
-                    self.sphere_radii[class_idx],
-                    self.slab_radii[class_idx])
+                x_b = self.minimize_over_feasible_set(y_b, w)
 
                 margin = y_b * (w.dot(x_b) + b)
                 if (worst_margin is None) or (margin < worst_margin):
@@ -192,6 +207,27 @@ class UpperBound:
             epsilon,
             num_iter_to_throw_out)
         '''
+        return total_loss, good_loss, bad_loss
+
+    def minimize_over_feasible_set(self, y, w):
+        y_ind = self.class_map[y]
+
+        cvx_x = cvx.Variable(w.size)
+
+        objective = self.loss_cvx(cvx_x, y=y_ind, w=w)
+        constraints_all = self.constraints_cvx(cvx_x)
+
+        constraints = list()
+        constraints.append(constraints_all[y_ind])
+
+        prob = cvx.Problem(objective, constraints)
+        prob.solve(verbose=self.verbose)
+
+        x_opt = np.array(cvx_x.value).reshape(-1)
+
+        # TODO Project onto feasible set
+
+        return x_opt
 
 
 class Minimizer(object):

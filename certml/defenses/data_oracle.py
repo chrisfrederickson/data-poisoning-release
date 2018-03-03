@@ -5,6 +5,7 @@ from certml.utils.data import generate_class_map, get_centroids, \
     get_centroid_vec, filter_points_outside_feasible_set
 from certml.defenses import BaseDefense
 from certml.certify import CertifiableMixin
+import cvxpy as cvx
 
 
 class DataOracle(BaseDefense, CertifiableMixin):
@@ -80,6 +81,26 @@ class DataOracle(BaseDefense, CertifiableMixin):
     def cert_params(self):
         params = {
             'type': 'defense',
-            'constraints_cvx': ''
+            'constraints_cvx': self._cert_constraints_cvx,
+            'data': {
+                'class_map': self.class_map
+            }
         }
         return params
+
+    def _cert_constraints_cvx(self, cvx_x):
+        num_classes = len(self.class_map)
+        constraints_cvx = [None] * num_classes
+
+        for ind in range(num_classes):
+
+            cvx_x_c = cvx_x - self.centroids[ind, :]
+
+            if self.mode is 'sphere':
+                constraints_cvx[ind] = cvx.norm(cvx_x_c, 2) < self.radii[ind]
+            elif self.mode is 'slab':
+                constraints_cvx[ind] = cvx.abs(cvx.sum_entries(self.centroid_vec, cvx_x_c)) < self.radii[ind]
+            else:
+                raise ValueError('Invalid mode type')
+
+        return constraints_cvx

@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.sparse as sparse
 from scipy.linalg import orth
-from certml import defenses, upper_bounds
+from certml import upper_bounds
 from sklearn import metrics
 
 

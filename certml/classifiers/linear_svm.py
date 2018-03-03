@@ -4,6 +4,8 @@ import numpy as np
 import scipy.sparse as sparse
 from sklearn import svm
 from certml.certify import CertifiableMixin
+import cvxpy as cvx
+from certml.utils.cvx import cvx_dot
 
 
 class LinearSVM(svm.LinearSVC, CertifiableMixin):
@@ -80,13 +82,20 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
     def cert_params(self):
         params = {
             'type': 'classifier',
-            'loss': self.cert_loss,
-            'loss_grad': '',
-            'loss_cvx': ''
+            'loss': self._cert_loss,
+            'loss_grad': self._cert_loss_grad,
+            'loss_cvx': self._cert_loss_cvx,
+            'data': {
+                'features': self._cert_x,
+                'labels': self._cert_y
+            },
+            'params': {
+                'coef': self.coef_.flatten()
+            }
         }
         return params
 
-    def cert_loss(self, X, Y, w=None, b=None, sample_weights=None):
+    def _cert_loss(self, X, Y, w=None, b=None, sample_weights=None):
         """ Calculate Hinge Loss
 
             Calculates the hinge loss.
@@ -106,8 +115,8 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
                 Hinge loss
             """
         if w is None or b is None:
-            w = self.coef_
-            b = self.intercept_
+            w = self.coef_.flatten()
+            b = self.intercept_.flatten()
 
         if sample_weights is not None:
             sample_weights = sample_weights / np.sum(sample_weights)
@@ -115,7 +124,10 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
         else:
             return np.mean(np.maximum(1 - Y * (X.dot(w) + b), 0))
 
-    def cert_loss_grad(self, X, Y, w=None, b=None):
+    def _cert_loss_cvx(self, cvx_x, y=None, w=None):
+        return cvx.Minimize(1 - y * cvx_dot(w.flatten(), cvx_x))
+
+    def _cert_loss_grad(self, X, Y, w=None, b=None):
         """ Gradient of Hinge Loss
 
             Parameters
@@ -137,10 +149,10 @@ class LinearSVM(svm.LinearSVC, CertifiableMixin):
                 Gradient of intercept
             """
         if w is None or b is None:
-            w = self.coef_
-            b = self.intercept_
+            w = self.coef_.flatten()
+            b = self.intercept_.flatten()
 
-        margins = Y * (X.dot(w) + b)
+        margins = Y * (X.dot(w) + b).flatten()
         sv_indicators = margins < 1
         if sparse.issparse(X):
             grad_w = np.sum(
