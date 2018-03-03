@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import scipy.sparse as sparse
 import scipy.io as sio
-from certml import data_utils as data, datasets, upper_bounds
+from certml.legacy import data_utils as data, datasets, upper_bounds
 
 ##############
 # Parameters #

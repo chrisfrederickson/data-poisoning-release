@@ -3,7 +3,8 @@
 import json
 import numpy as np
 import scipy.sparse as sparse
-from certml import defenses, upper_bounds
+from certml import defenses
+from certml.legacy import upper_bounds
 
 
 # Migrated
