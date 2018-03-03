@@ -47,6 +47,16 @@ class UpperBound(object):
         self.constraints_cvx = defense['constraints_cvx']
         self.class_map = defense['data']['class_map']
 
+        self.x_c = None
+        self.y_c = None
+
+        self.best_upper_bound = None
+        self.best_upper_good_loss = None
+        self.best_upper_bad_loss = None
+        self.best_upper_params_norm_sq = None
+        self.best_upper_good_acc = None
+        self.best_upper_bad_acc = None
+
     def certify(self, epsilons):
         total_loss = np.zeros_like(epsilons)
         good_loss = np.zeros_like(epsilons)
@@ -156,24 +166,15 @@ class UpperBound(object):
             total_loss = good_loss + epsilon * bad_loss
 
             if best_upper_bound > total_loss:
-                best_upper_bound = total_loss
-                best_upper_good_loss = good_loss
-                best_upper_bad_loss = bad_loss
-                best_upper_params_norm_sq = params_norm_sq
-                best_upper_good_acc = np.mean((self.y * (self.x.dot(w) + b)) > 0)
+                self.best_upper_bound = total_loss
+                self.best_upper_good_loss = good_loss
+                self.best_upper_bad_loss = bad_loss
+                self.best_upper_params_norm_sq = params_norm_sq
+                self.best_upper_good_acc = np.mean((self.y * (self.x.dot(w) + b)) > 0)
                 if worst_margin > 0:
-                    best_upper_bad_acc = 1.0
+                    self.best_upper_bad_acc = 1.0
                 else:
-                    best_upper_bad_acc = 0.0
-
-            if self.verbose:
-                if iter_idx % self.print_interval == 0:
-                    print("  Bad margin (%s)         : %s" % (worst_y_b, worst_margin))
-                    print("  Bad loss (%s)           : %s" % (worst_y_b, bad_loss))
-                    print("  Good loss               : %s" % good_loss)
-                    print("  Total loss              : %s" % total_loss)
-                    print("  Sq norm of params_bias  : %s" % params_norm_sq)
-                    print("  Grad w norm             : %s" % np.linalg.norm(grad_w))
+                    self.best_upper_bad_acc = 0.0
 
             ##########
             # Line 6 #
@@ -193,21 +194,11 @@ class UpperBound(object):
             w = sum_of_grads_w / current_lambda
             b = sum_of_grads_b / current_lambda
 
-        print('Optimization run for %s iterations' % self.max_iter)
+        # Save Candidate Attack Points
+        self.x_c = x_bs
+        self.y_c = y_bs
 
-        print('Final upper bound:')
-        print("  Total loss              : %s" % best_upper_bound)
-        print('')
-
-        # Determine Lower Bound from Candidate Attack Points
-        '''
-        X_modified, Y_modified, idx_train, idx_poison = sample_lower_bound_attack(
-            X_train, Y_train,
-            x_bs, y_bs,
-            epsilon,
-            num_iter_to_throw_out)
-        '''
-        return total_loss, good_loss, bad_loss
+        return self.best_upper_bound, self.best_upper_good_acc, self.best_upper_bad_loss
 
     def minimize_over_feasible_set(self, y, w):
         y_ind = self.class_map[y]
@@ -228,105 +219,3 @@ class UpperBound(object):
         # TODO Project onto feasible set
 
         return x_opt
-
-
-class Minimizer(object):
-    """ CVX Minimizer / Data Maximizer
-
-    This class determines the attack point the maximises the
-    loss constrained by the feasible set. This is the first
-    line of the loop in Algorithm 1.
-
-    For the sphere defense this is the optimization problem:
-
-    .. math
-        max_x &  1 - y w^T x
-        s.t.  &  || x - c ||2 < r
-
-    For the slab defense this is the optimization problem:
-
-    .. math
-        max_x & 1 - y w^T x
-        s.t.  &  |<x - c, c_vec>| < r
-
-    where
-        c :      class centroid
-        c_vec :  vector between the two class centroids
-    """
-
-    def __init__(self, use_sphere=True, use_slab=True):
-        """ Minimizer CVX Minimizer / Data Maximizer
-
-        Parameters
-        ----------
-        use_sphere : bool
-            Use sphere projection?
-        use_slab : bool
-            Use slab projection?
-        """
-
-        # TODO This currently does not change for different loss function!
-        d = 3
-
-        self.cvx_x = cvx.Variable(d)
-        self.cvx_y = cvx.Parameter(1)
-        self.cvx_w = cvx.Parameter(d)
-        self.cvx_centroid = cvx.Parameter(d)
-        self.cvx_centroid_vec = cvx.Parameter(d)
-        self.cvx_sphere_radius = cvx.Parameter(1)
-        self.cvx_slab_radius = cvx.Parameter(1)
-
-        self.cvx_x_c = self.cvx_x - self.cvx_centroid
-
-        self.constraints = []
-        if use_sphere:
-            self.constraints.append(cvx.norm(self.cvx_x_c, 2) < self.cvx_sphere_radius)
-        if use_slab:
-            self.constraints.append(cvx.abs(cvx_dot(self.cvx_centroid_vec, self.cvx_x_c)) < self.cvx_slab_radius)
-
-        self.objective = cvx.Maximize(1 - self.cvx_y * cvx_dot(self.cvx_w, self.cvx_x))
-
-        self.prob = cvx.Problem(self.objective, self.constraints)
-
-    def minimize_over_feasible_set(self, y, w, centroid, centroid_vec, sphere_radius, slab_radius,
-                                   verbose=False):
-        """ Minimize over Feasible Set
-
-        Includes both sphere and slab.
-
-        Parameters
-        ----------
-        y : int
-            Input label
-        w : np.ndarray of shape (dimensions,)
-            Coefficient
-        centroid : np.ndarray of shape (classes, dimensions)
-            Centroid for each class
-        centroid_vec : np.ndarray of shape (dimensions,)
-            Vector between the two centroids
-        sphere_radius : np.ndarray of shape (classes,)
-            Sphere radius for each class
-        slab_radius : np.ndarray of shape (classes,)
-            Slab radius for each class
-        verbose : bool
-            CVX verbose
-
-        Returns
-        -------
-        x : np.ndarray
-            Optimal x;
-        """
-        P = get_projection_matrix(w, centroid, centroid_vec)
-
-        self.cvx_y.value = y
-        self.cvx_w.value = P.dot(w.reshape(-1))
-        self.cvx_centroid.value = P.dot(centroid.reshape(-1))
-        self.cvx_centroid_vec.value = P.dot(centroid_vec.reshape(-1))
-        self.cvx_sphere_radius.value = sphere_radius
-        self.cvx_slab_radius.value = slab_radius
-
-        self.prob.solve(verbose=verbose)
-
-        x_opt = np.array(self.cvx_x.value).reshape(-1)
-
-        return x_opt.dot(P)
